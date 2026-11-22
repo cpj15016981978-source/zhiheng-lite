@@ -1,0 +1,13 @@
+﻿models/*.gguf
+models/*.bin
+runtime/*.exe
+runtime/*.dll
+runtime/*.zip
+__pycache__/
+*.pyc
+.venv/
+.env
+data/
+models/
+runtime/
+*.log
