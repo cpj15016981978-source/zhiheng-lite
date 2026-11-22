@@ -17,11 +17,12 @@ Release assets
 
 ## GitHub
 
-1. Create an empty repository, for example `zhiheng-lite`.
-2. Push this folder:
+Published: https://github.com/cpj15016981978-source/zhiheng-lite
+
+Push this folder:
 
 ```bash
-git remote add origin https://github.com/<account>/zhiheng-lite.git
+git remote add origin https://github.com/cpj15016981978-source/zhiheng-lite.git
 git branch -M main
 git push -u origin main
 ```
@@ -34,9 +35,10 @@ GitHub limits each release asset to 2 GB; each part is below 1.5 GB.
 
 ## Gitee
 
-1. Create `zhiheng-lite` on Gitee.
-2. Push the same source repository.
-3. Gitee release asset limits are smaller; do not upload the 2.3 GB package
+Published: https://gitee.com/zhiheng-lite/zhiheng-lite
+
+1. Push the same source repository.
+2. Gitee release asset limits are smaller; do not upload the 2.3 GB package
    there.
 4. Put the model/runtime package on a domestic file host and link it from the
    Gitee release notes, or publish the source-only repo and point to GitHub
