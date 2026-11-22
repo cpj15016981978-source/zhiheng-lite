@@ -128,5 +128,14 @@ MIT. See [LICENSE](LICENSE).
 
 Source code is here. The Windows runtime is a release asset because it contains
 `llama-server` and `core.gguf` (about 2.3 GB), which GitHub cannot store as a
-single release asset. See [PUBLISH.md](PUBLISH.md) for the split parts and
-checksums.
+single release asset.
+
+- Release: https://github.com/cpj15016981978-source/zhiheng-lite/releases/tag/v0.3.0
+- Download both parts, join, then extract:
+
+```bat
+copy /b ZhihengLite-0.3.0-win64.zip.part1 + ZhihengLite-0.3.0-win64.zip.part2 ZhihengLite-0.3.0-win64.zip
+```
+
+Checksums are in `SHA256SUMS.txt` on the release page. See [PUBLISH.md](PUBLISH.md)
+for source-only and Gitee notes.
