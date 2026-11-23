@@ -30,7 +30,7 @@ Requires Python 3.10+ and the release assets `runtime/llama-server.exe` and `mod
 2. Add or update a standard-library test.
 3. Run the full test suite.
 4. Update `README.md` if behavior changes.
-5. Do not commit local paths, credentials, model files, or chat data.
+5. Do not commit local paths, credentials, model files, or office input/output data.
 
 ## Security-sensitive changes
 

@@ -7,6 +7,7 @@ import pathlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from core_model import CoreModel, CoreModelError
+from office_pipeline import run as run_office, TASKS
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
@@ -14,7 +15,6 @@ CORE = CoreModel(CONFIG)
 MODEL = CORE.name
 HOST = str(CONFIG.get("host") or "127.0.0.1")
 PORT = int(CONFIG.get("port") or 8760)
-SYSTEM = str(CONFIG.get("system") or "你是知衡 Lite，一个本地办公助手。回答简洁、直接。")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -31,12 +31,14 @@ class Handler(BaseHTTPRequestHandler):
         if self.path in ("/", "/index.html"):
             self._send(200, (ROOT / "static" / "index.html").read_bytes(), "text/html; charset=utf-8")
         elif self.path == "/api/health":
-            self._send(200, {"ok": True, "model": MODEL, "memory": False, **CORE.health()})
+            self._send(200, {"ok": True, "model": MODEL, "memory": False,
+                             "tasks": {k: v["label"] for k, v in TASKS.items()},
+                             **CORE.health()})
         else:
             self._send(404, {"error": "not found"})
 
     def do_POST(self):
-        if self.path != "/api/chat":
+        if self.path != "/api/office":
             self._send(404, {"error": "not found"})
             return
         try:
@@ -44,13 +46,11 @@ class Handler(BaseHTTPRequestHandler):
             if n <= 0 or n > 2_000_000:
                 raise ValueError("bad body")
             payload = json.loads(self.rfile.read(n).decode("utf-8"))
-            messages = payload.get("messages") or []
-            if not isinstance(messages, list):
-                raise ValueError("messages must be list")
-            text = CORE.chat(messages)
-            self._send(200, {"content": text, "model": MODEL, "provider": CORE.health().get("provider")})
+            out = run_office(CORE, payload.get("task"), payload.get("text"), payload.get("title"))
+            self._send(200, {"ok": True, "model": MODEL,
+                             "provider": CORE.health().get("provider"), **out})
         except Exception as e:
-            self._send(400, {"error": "%s: %s" % (type(e).__name__, e)})
+            self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
 
     def log_message(self, fmt, *args):
         pass

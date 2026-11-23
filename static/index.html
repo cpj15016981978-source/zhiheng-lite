@@ -2,70 +2,101 @@
 <html lang="zh">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>知衡 Lite</title>
+<title>知衡 Lite · 本地办公流水线</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   body { margin: 0; background: #151412; color: #e9e3d6; font: 15px/1.7 system-ui, "Microsoft YaHei", sans-serif; }
-  main { max-width: 860px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
-  header { padding: 18px 20px; border-bottom: 1px solid #2b2823; display: flex; justify-content: space-between; }
-  header b { color: #d8c7a5; letter-spacing: 1px; }
+  main { max-width: 980px; margin: 0 auto; padding: 22px 20px 40px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #2b2823; padding-bottom: 14px; margin-bottom: 18px; }
+  header b { color: #d8c7a5; letter-spacing: 1px; font-size: 18px; }
   header span { color: #777; font-size: 12px; }
-  #chat { flex: 1; padding: 20px; overflow: auto; }
-  .msg { margin: 0 0 18px; white-space: pre-wrap; }
-  .user { color: #9fc6c2; }
-  .ai { color: #e9e3d6; }
-  .meta { color: #666; font-size: 11px; margin-bottom: 4px; }
-  footer { padding: 12px 20px 20px; border-top: 1px solid #2b2823; }
-  textarea { width: 100%; background: #1d1b18; color: #e9e3d6; border: 1px solid #39342c; border-radius: 10px; padding: 12px; resize: none; min-height: 64px; }
-  button { margin-top: 8px; background: #b48b57; color: #1a1712; border: 0; border-radius: 8px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
-  button:disabled { opacity: .4; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #1b1916; border: 1px solid #302b24; border-radius: 12px; padding: 14px; }
+  label { display: block; color: #b9aa8e; font-size: 12px; margin: 2px 0 6px; }
+  select, input[type=text], textarea { width: 100%; background: #14120f; color: #e9e3d6; border: 1px solid #39342c; border-radius: 9px; padding: 10px; font: inherit; }
+  textarea { min-height: 320px; resize: vertical; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button { background: #b48b57; color: #1a1712; border: 0; border-radius: 8px; padding: 9px 18px; font-weight: 700; cursor: pointer; }
+  button:disabled { opacity: .45; }
+  button.ghost { background: transparent; color: #c9bda8; border: 1px solid #39342c; font-weight: 500; }
+  .hint { color: #7d7465; font-size: 12px; }
+  #out { white-space: pre-wrap; min-height: 320px; background: #14120f; border: 1px solid #39342c; border-radius: 9px; padding: 12px; overflow: auto; }
+  #status { color: #9fc6c2; font-size: 12px; min-height: 18px; margin-top: 8px; }
+  .error { color: #ff9d9d; }
 </style>
 <main>
-  <header><b>知衡 Lite</b><span id="model">本地模型 · 无记忆</span></header>
-  <section id="chat"></section>
-  <footer>
-    <textarea id="input" placeholder="说点什么…（Enter 发送，Shift+Enter 换行）"></textarea>
-    <button id="send">发送</button>
-  </footer>
+  <header><b>知衡 Lite</b><span id="model">本地模型 · 无记忆 · 办公流水线</span></header>
+  <div class="grid">
+    <section class="card">
+      <label>任务</label>
+      <select id="task">
+        <option value="minutes">会议纪要 → 结论 → 待办</option>
+        <option value="summary">文档 → 摘要 → 风险</option>
+        <option value="actions">文本 → 待办清单</option>
+      </select>
+      <label style="margin-top:12px">标题（可选）</label>
+      <input id="title" type="text" placeholder="例如：11月23日 生产例会">
+      <label style="margin-top:12px">输入</label>
+      <div class="row" style="margin-bottom:6px">
+        <input id="file" type="file" accept=".txt,.md,.csv,.log,.json" style="display:none">
+        <button class="ghost" onclick="document.querySelector('#file').click()">读文本文件</button>
+        <span class="hint">PDF/Word 先转成文本；音频先转写；不传云端。</span>
+      </div>
+      <textarea id="text" placeholder="把会议转写、文档正文或待办原文粘贴到这里…"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="run">生成</button>
+        <button class="ghost" id="clear">清空</button>
+        <span class="hint">只处理当前页面输入，不写数据库。</span>
+      </div>
+      <div id="status"></div>
+    </section>
+    <section class="card">
+      <label>结构化输出</label>
+      <div id="out">生成后会显示在这里。</div>
+      <div class="row" style="margin-top:8px">
+        <button class="ghost" id="download" disabled>下载 Markdown</button>
+        <button class="ghost" id="copy" disabled>复制</button>
+      </div>
+    </section>
+  </div>
 </main>
 <script>
-  const chat = document.querySelector('#chat');
-  const input = document.querySelector('#input');
-  const sendBtn = document.querySelector('#send');
-  const modelEl = document.querySelector('#model');
-  let busy = false;
-  const messages = []; // 只存在当前页面，不落库、不留档
-
-  function add(role, text) {
-    const d = document.createElement('div');
-    d.className = 'msg ' + role;
-    d.innerHTML = '<div class="meta">' + (role === 'user' ? '你' : 'AI') + '</div>';
-    const t = document.createElement('div');
-    t.textContent = text;
-    d.appendChild(t); chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
-  }
-
-  async function send() {
-    const text = input.value.trim();
-    if (!text || busy) return;
-    input.value = ''; add('user', text); messages.push({role: 'user', content: text});
-    busy = true; sendBtn.disabled = true;
-    try {
-      const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({messages})});
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || '请求失败');
-      add('ai', d.content || '（没有内容）');
-      messages.push({role: 'assistant', content: d.content || ''});
-    } catch (e) { add('ai', '错误：' + e.message); }
-    finally { busy = false; sendBtn.disabled = false; input.focus(); }
-  }
-
-  sendBtn.onclick = send;
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  const $ = s => document.querySelector(s);
+  let last = '';
+  $('#file').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.size > 1_500_000) { $('#status').textContent = '文件太大，最多 1.5MB 文本'; return; }
+    $('#text').value = await f.text();
+    $('#status').textContent = '已读入 ' + f.name;
   });
-  fetch('/api/health').then(r => r.json()).then(d => { modelEl.textContent = d.model + ' · 无记忆'; }).catch(() => {});
-  input.focus();
+  $('#run').onclick = async () => {
+    const text = $('#text').value.trim();
+    if (!text) { $('#status').textContent = '先粘贴或读入文本'; return; }
+    const btn = $('#run'); btn.disabled = true;
+    $('#status').textContent = '处理中…'; $('#status').className = '';
+    try {
+      const r = await fetch('/api/office', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({task: $('#task').value, title: $('#title').value, text})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      last = d.content || '';
+      $('#out').textContent = last || '（空输出）';
+      $('#download').disabled = !last; $('#copy').disabled = !last;
+      $('#status').textContent = '完成 · ' + (d.chars || 0) + ' 字输入 · ' + (d.provider || 'core');
+    } catch (e) {
+      $('#status').textContent = '错误：' + e.message; $('#status').className = 'error';
+    } finally { btn.disabled = false; }
+  };
+  $('#clear').onclick = () => { $('#text').value = ''; $('#title').value = ''; $('#out').textContent = '生成后会显示在这里。'; last = ''; $('#download').disabled = true; $('#copy').disabled = true; $('#status').textContent = ''; };
+  $('#download').onclick = () => {
+    if (!last) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([last], {type:'text/markdown;charset=utf-8'}));
+    a.download = ($('#title').value || 'zhiheng-output') + '.md'; a.click();
+  };
+  $('#copy').onclick = async () => { if (last) { await navigator.clipboard.writeText(last); $('#status').textContent = '已复制'; } };
+  fetch('/api/health').then(r => r.json()).then(d => { $('#model').textContent = d.model + ' · 无记忆 · 办公流水线'; }).catch(() => {});
 </script>
 </html>

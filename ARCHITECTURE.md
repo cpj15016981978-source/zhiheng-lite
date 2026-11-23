@@ -2,13 +2,13 @@
 
 ```text
 Browser (static/index.html)
-        │  POST /api/chat
+        │  POST /api/office
         ▼
 app.py  ──────────────►  core_model  ──►  llama.cpp  ──►  models/core.gguf
         │
         └── GET /api/health
 
-cli.py  ── serve / chat / model status / doctor / version
+cli.py  ── serve / office / model status / doctor / version
 ```
 
 ## Components
@@ -29,7 +29,7 @@ The supported command-line surface:
 
 ```text
 serve        start the UI
-chat         one-shot or REPL
+office       run a task on a text file
 model status check the bundled core model
 doctor       environment diagnostics
 version      configured model and port
