@@ -141,7 +141,7 @@ single release asset.
 
 - GitHub: https://github.com/cpj15016981978-source/zhiheng-lite
 - Gitee mirror: https://gitee.com/zhiheng-lite/zhiheng-lite
-- Release: https://github.com/cpj15016981978-source/zhiheng-lite/releases
+- Release: https://github.com/cpj15016981978-source/zhiheng-lite/releases/tag/v0.4.0
 
 Download both parts, join, then extract:
 

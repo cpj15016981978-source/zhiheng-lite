@@ -10,8 +10,8 @@ GitHub / Gitee / GitCode
   source code, docs, tests, placeholder folders
 
 Release assets
-  ZhihengLite-0.3.0-win64.zip.part1
-  ZhihengLite-0.3.0-win64.zip.part2
+  ZhihengLite-0.4.0-win64.zip.part1
+  ZhihengLite-0.4.0-win64.zip.part2
   SHA256SUMS.txt
 ```
 
@@ -27,7 +27,7 @@ git branch -M main
 git push -u origin main
 ```
 
-3. Create a release tag `v0.3.0`.
+3. Create a release tag `v0.4.0`.
 4. Upload the split parts and `SHA256SUMS.txt` as release assets.
 5. Put the download links in `README.md`.
 
@@ -52,7 +52,7 @@ Same as Gitee: source repository plus an external binary link.
 
 ```powershell
 cd D:\DSH\ZhihengLite
-tar.exe -a -c -f D:\DSH\dist\ZhihengLite-0.3.0-win64.zip `
+tar.exe -a -c -f D:\DSH\dist\ZhihengLite-0.4.0-win64.zip `
   app.py core_model.py cli.py config.json README.md CONTRIBUTING.md `
   ARCHITECTURE.md SECURITY.md LICENSE MODEL_NOTICE.md .gitignore `
   static tests models runtime
