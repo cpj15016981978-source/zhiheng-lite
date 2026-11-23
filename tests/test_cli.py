@@ -42,24 +42,6 @@ class CliTest(unittest.TestCase):
         self.assertIn("MISSING", buf.getvalue())
 
 
-class OfficePipelineTest(unittest.TestCase):
-    def test_minutes(self):
-        class Fake:
-            def chat(self, messages):
-                self.messages = messages
-                return "## 摘要\n测试\n## 待办\n| 事项 | 负责人 | 时间 |"
-        out = __import__("office_pipeline").run(Fake(), "minutes", "开会：明天交报表", "测试会")
-        self.assertEqual(out["task"], "minutes")
-        self.assertIn("待办", out["content"])
-        self.assertEqual(out["title"], "测试会")
-
-    def test_rejects_empty(self):
-        class Fake:
-            def chat(self, messages): return "x"
-        with self.assertRaises(ValueError):
-            __import__("office_pipeline").run(Fake(), "summary", "")
-
-
 class CoreModelTest(unittest.TestCase):
     def test_missing_runtime_is_clear(self):
         m = CoreModel({"runtime": "runtime/does-not-exist.exe",

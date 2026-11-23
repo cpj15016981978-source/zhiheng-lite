@@ -8,7 +8,6 @@ import pathlib
 import sys
 
 from core_model import CoreModel, CoreModelError
-from office_pipeline import run as run_office, TASKS as OFFICE_TASKS
 
 ROOT = pathlib.Path(__file__).resolve().parent
 
@@ -19,6 +18,14 @@ def cfg():
 
 def core():
     return CoreModel(cfg())
+
+
+def chat_once(text):
+    c = cfg()
+    try:
+        return core().chat([{"role": "user", "content": text}])
+    except CoreModelError:
+        raise
 
 
 def doctor():
@@ -55,11 +62,9 @@ def parse_args(argv=None):
     ap = argparse.ArgumentParser(prog="zhiheng", description="Zhiheng Lite CLI")
     sub = ap.add_subparsers(dest="cmd")
     sub.add_parser("serve", help="start the browser UI")
+    p_chat = sub.add_parser("chat", help="one-shot or interactive chat")
+    p_chat.add_argument("text", nargs="?", default=None)
     sub.add_parser("doctor", help="check core runtime and model")
-    p_office = sub.add_parser("office", help="run the office pipeline")
-    p_office.add_argument("file", nargs="?", default="")
-    p_office.add_argument("--task", default="minutes", choices=sorted(OFFICE_TASKS))
-    p_office.add_argument("--title", default="")
     p_model = sub.add_parser("model", help="core model status")
     p_model.add_argument("action", choices=["status", "list"], nargs="?", default="status")
     sub.add_parser("version", help="print configured core model")
@@ -67,27 +72,12 @@ def parse_args(argv=None):
 
 
 def main(argv=None):
-    for stream in (sys.stdout, sys.stderr):
-        try:
-            stream.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
-            pass
     a = parse_args(argv)
     if a.cmd == "serve":
         serve()
         return 0
     if a.cmd == "doctor":
         return doctor()
-    if a.cmd == "office":
-        try:
-            text = (pathlib.Path(a.file).read_text(encoding="utf-8", errors="replace")
-                    if a.file else sys.stdin.buffer.read().decode("utf-8", "replace"))
-            out = run_office(core(), a.task, text, a.title)
-            print(out["content"])
-            return 0
-        except Exception as e:
-            print("office failed: %s" % e, file=sys.stderr)
-            return 1
     if a.cmd == "version":
         c = cfg()
         print("zhiheng-lite model=%s provider=%s host=%s port=%s" %
@@ -99,6 +89,26 @@ def main(argv=None):
             if k in s:
                 print("%s: %s" % (k, s[k]))
         return 0 if s.get("ok") else 1
+    if a.cmd == "chat":
+        if a.text:
+            try:
+                print(chat_once(a.text))
+                return 0
+            except CoreModelError as e:
+                print("core model unavailable: %s" % e, file=sys.stderr)
+                return 1
+        print("Zhiheng Lite REPL. Ctrl-D to exit.")
+        while True:
+            try:
+                line = input("> ").strip()
+            except EOFError:
+                return 0
+            if line:
+                try:
+                    print(chat_once(line))
+                except CoreModelError as e:
+                    print("core model unavailable: %s" % e, file=sys.stderr)
+                    return 1
     ap.print_help()
     return 0
 

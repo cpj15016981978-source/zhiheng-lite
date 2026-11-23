@@ -1,28 +1,20 @@
 # Zhiheng Lite
 
-A minimal, local-first AI **office pipeline**.
+A minimal, local-first AI office assistant.
 
-One local model. No account. No database. No memory. No cloud API required.
+One local model. No account. No database. No long-term memory. No cloud API required.
 
 > This is the clean open-source distribution. The author's personal Windows app is a separate, private runtime and is not part of this repository.
 
 ## What it is
 
 ```text
-Text input  →  task prompt  →  bundled llama.cpp  →  one core model  →  Markdown output
+Browser UI  →  small Python server  →  bundled llama.cpp runtime  →  one core model
 ```
 
-Three office tasks:
-
-```text
-会议纪要 → 摘要 / 结论 / 待办
-文档     → 一句话结论 / 关键点 / 风险
-文本     → 待办表格
-```
-
-- One model, configured in `config.json`
-- Stateless: input and output live only in the browser tab
-- No chat history, no memory, no database
+- Single model, configured in `config.json`
+- Stateless: chat history lives only in the browser tab
+- No database, no embeddings, no scheduler
 - No telemetry, no API keys, no accounts
 - MIT licensed; fork and replace anything
 
@@ -45,6 +37,7 @@ release assets). For local development you can set `"dev_ollama": true` in
 ```bash
 git clone <your-fork-url> zhiheng-lite
 cd zhiheng-lite
+# edit config.json if needed
 python cli.py doctor
 python cli.py serve
 ```
@@ -60,13 +53,12 @@ python app.py
 ## CLI
 
 ```bash
-python cli.py serve                       # start the office UI
-python cli.py office --task minutes FILE   # run a pipeline on a text file
-python cli.py office --task summary FILE
-python cli.py office --task actions FILE
-python cli.py model status                 # check the bundled core model
-python cli.py doctor                       # check the bundled core runtime and model
-python cli.py version                      # show the configured model
+python cli.py serve              # start the web UI
+python cli.py chat "hello"       # one-shot chat
+python cli.py chat               # interactive REPL
+python cli.py model status       # check the bundled core model
+python cli.py doctor             # check the bundled core runtime and model
+python cli.py version            # show the configured model
 ```
 
 ## Configuration
@@ -85,7 +77,8 @@ Only `config.json`:
   "port": 8760,
   "num_ctx": 4096,
   "max_tokens": 2048,
-  "timeout": 300
+  "timeout": 300,
+  "system": "You are Zhiheng Lite, a local office assistant."
 }
 ```
 
@@ -96,7 +89,6 @@ ship a different single core model.
 
 ```text
 No memory
-No chat history
 No database
 No accounts
 No API keys
@@ -105,20 +97,20 @@ No arbitrary shell
 ```
 
 The model is loaded by the bundled llama.cpp runtime. The server only accepts
-loopback connections by default.
+loopback connections by default. If you only have the source checkout, use
+the release assets or set `dev_ollama` for development.
 
 ## Project layout
 
 ```text
-app.py               office server
-core_model.py        bundled llama.cpp client
-office_pipeline.py   task prompts + input validation
-cli.py               command-line entry point
-config.json          core model, runtime, host, port
-runtime/             llama-server binary (release asset)
-models/              core.gguf (release asset)
-static/index.html    single-page office UI
-tests/               standard-library tests
+app.py              server
+core_model.py       bundled llama.cpp client
+cli.py              command-line entry point
+config.json         core model, runtime, host, port
+runtime/            llama-server binary (release asset)
+models/             core.gguf (release asset)
+static/index.html   single-page chat UI
+tests/              standard-library tests
 ```
 
 ## Contributing
@@ -132,22 +124,9 @@ See [SECURITY.md](SECURITY.md). Please do not report vulnerabilities in public i
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
 ## Download
 
 Source code is here. The Windows runtime is a release asset because it contains
 `llama-server` and `core.gguf` (about 2.3 GB), which GitHub cannot store as a
-single release asset.
-
-- GitHub: https://github.com/cpj15016981978-source/zhiheng-lite
-- Gitee mirror: https://gitee.com/zhiheng-lite/zhiheng-lite
-- Release: https://github.com/cpj15016981978-source/zhiheng-lite/releases/tag/v0.4.0
-
-Download both parts, join, then extract:
-
-```bat
-copy /b ZhihengLite-0.4.0-win64.zip.part1 + ZhihengLite-0.4.0-win64.zip.part2 ZhihengLite-0.4.0-win64.zip
-```
-
-Checksums are in `SHA256SUMS.txt` on the release page. See [PUBLISH.md](PUBLISH.md)
-for source-only and Gitee notes.
+single release asset. See [PUBLISH.md](PUBLISH.md) for the split parts and
+checksums.

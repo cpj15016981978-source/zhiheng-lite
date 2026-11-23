@@ -23,7 +23,7 @@ It does not:
 - listen on a public interface by default
 - store credentials
 - execute shell commands
-- write input/output to disk
+- write chat data to disk
 - load remote plugins
 
 ## Known limits
