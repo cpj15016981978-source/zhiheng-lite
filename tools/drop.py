@@ -26,7 +26,7 @@ import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DEFAULT_ORIGIN = os.environ.get("PAI_BARE_ORIGIN") or r"D:\DSH\pai-origin.git"
+DEFAULT_ORIGIN = os.environ.get("PAI_BARE_ORIGIN") or str(Path.home() / "pai-origin.git")
 ACTORS = ("Q", "DS", "Boss")
 SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,60}$")
 TRAILERS = ("Approved-by:", "Reviewed-by:", "P-Number:")

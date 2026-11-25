@@ -54,7 +54,7 @@ QUARANTINE_PREFIXES = ("外部AI投递", "_backup")
 
 _HERE = Path(__file__).resolve().parent
 DEFAULT_WS = _HERE.parent                       # personal-ai-system/
-DEFAULT_MIRROR = Path(os.environ.get("PAI_RELAY_MIRROR", r"D:\Q\personal-ai-system"))
+DEFAULT_MIRROR = Path(os.environ.get("PAI_RELAY_MIRROR") or (_HERE.parent / "mirror"))
 # 跨树断言必带树名（板上老规矩）：--ws 那一棵在报告行里叫这个，与黑板「发布位／镜像」的叫法对齐。
 WS_LABEL = "发布位"
 

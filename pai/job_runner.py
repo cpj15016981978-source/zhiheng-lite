@@ -37,7 +37,7 @@ CAPABILITY = {
 STATUSES = ("pending", "running", "waiting", "done", "failed", "expired")
 TERMINAL = ("done", "failed", "expired")
 MAX_HOPS = 8
-ACTIONS = ("noop", "read_text", "list_dir", "summarize_file")
+ACTIONS = ("noop", "read_text", "list_dir", "summarize_file", "agent_step")
 
 
 def enabled():
@@ -87,6 +87,8 @@ def _conn():
           filename TEXT NOT NULL,
           content TEXT NOT NULL,
           status TEXT NOT NULL DEFAULT 'pending',
+          plan_id TEXT NOT NULL DEFAULT '',
+          step_index INTEGER NOT NULL DEFAULT 0,
           created_at TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS plans (
@@ -94,6 +96,7 @@ def _conn():
           goal TEXT NOT NULL,
           steps TEXT NOT NULL DEFAULT '[]',
           status TEXT NOT NULL DEFAULT 'draft',
+          reflection TEXT NOT NULL DEFAULT '',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         );
@@ -123,6 +126,15 @@ def _conn():
     ):
         if name not in cols:
             c.execute(ddl)
+    for table, ddl in (
+        ("plans", "ALTER TABLE plans ADD COLUMN reflection TEXT NOT NULL DEFAULT ''"),
+        ("file_proposals", "ALTER TABLE file_proposals ADD COLUMN plan_id TEXT NOT NULL DEFAULT ''"),
+        ("file_proposals", "ALTER TABLE file_proposals ADD COLUMN step_index INTEGER NOT NULL DEFAULT 0"),
+    ):
+        try:
+            c.execute(ddl)
+        except Exception:
+            pass
     return c
 
 
@@ -396,7 +408,7 @@ def _safe_filename(name):
     return name
 
 
-def create_file_proposal(filename, content):
+def create_file_proposal(filename, content, plan_id="", step_index=0):
     name = _safe_filename(filename)
     content = str(content or "")
     if not content.strip():
@@ -404,8 +416,9 @@ def create_file_proposal(filename, content):
     if len(content.encode("utf-8")) > 1024 * 1024:
         raise ValueError("文件超过 1MB")
     with closing(_conn()) as c, c:
-        cur = c.execute("INSERT INTO file_proposals(filename,content,status,created_at) VALUES(?,?, 'pending',?)",
-                        (name, content, _now()))
+        cur = c.execute("INSERT INTO file_proposals(filename,content,status,plan_id,step_index,created_at)"
+                        " VALUES(?,?, 'pending',?,?,?)",
+                        (name, content, str(plan_id or ""), int(step_index or 0), _now()))
     return {"id": cur.lastrowid, "filename": name, "status": "pending"}
 
 
@@ -439,3 +452,10 @@ def reject_file_proposal(pid):
         cur = c.execute("UPDATE file_proposals SET status='rejected' WHERE id=? AND status='pending'", (int(pid),))
     EG.audit("file_reject", "low", "allow", str(pid))
     return {"ok": cur.rowcount > 0}
+
+
+def set_plan_reflection(plan_id, text):
+    with closing(_conn()) as c, c:
+        c.execute("UPDATE plans SET reflection=?, updated_at=? WHERE id=?",
+                  (str(text or ""), _now(), str(plan_id)))
+    return get_plan(plan_id)

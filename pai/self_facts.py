@@ -11,6 +11,7 @@ from pathlib import Path
 
 from . import manifest as MF
 from . import self_model as SM
+from . import paths
 
 CAPABILITY = {
     "name": "C0 self_facts 只读事实层",
@@ -96,7 +97,7 @@ def collect(mem, ports=None, lock_candidates=None):
         "identity": _identity(mem),
         "origin": MF.build(mem),
         "boundaries": {
-            "read": ["D:\\DSH"],
+            "read": [str(paths.DATA_DIR)],
             "write": ["agent_layer/data/sandbox"],
             "network": False,
             "self_approval": False,

@@ -39,6 +39,7 @@ import sys
 import tempfile
 import threading
 import time
+import secrets
 import traceback
 import urllib.error
 import urllib.parse
@@ -61,7 +62,7 @@ from pai import self_model as SM
 from pai import self_knowledge as SK
 from pai import reasoning_gate as RG
 from pai import trace_store as TS
-from pai import c_score as CS
+from pai import c_score as CSCORE
 from pai import world_write_gate as WG
 from pai import daily_memory as DM
 from pai import world_shadow as WSH
@@ -69,14 +70,14 @@ from pai import task_ledger as TL
 from pai import profile as PF
 from pai import skill_library as SL
 from pai import file_extract as FE
-from pai import conversation_store as CS
+from pai import conversation_store as CONV
 from pai import asr as ASR
 from pai import vision as VIS
 from pai import web_search as WS
 from pai import usage as USAGE
 from pai import offline as OFF
 from pai import image_ocr as OCR
-from pai import local_search as LS
+from pai import local_search as LSEARCH
 from pai import code_agent as CODE
 from pai import tool_loop as TU
 from pai import tools as TOOLS
@@ -96,7 +97,7 @@ from pai import meta as MT
 from pai import jarvis as JV
 from pai import model_usage as MU
 from pai import mirrai_emotion as ME
-from pai import mirrai_memory as MM
+from pai import mirrai_memory as MMEM
 from pai import memory_candidates as MC
 from pai import persona_distill as PD
 from pai import relationship as REL
@@ -112,8 +113,8 @@ from pai import local_cascade as LC
 from pai import daily_brief as BR
 from pai import capability_router as CAPR
 from pai import startup as SU
-from pai import low_spec as LS
-from pai import model_mode as MM
+from pai import low_spec as LOWSPEC
+from pai import model_mode as MMODE
 from pai import network_policy as NP
 from pai import onboarding as OB
 from pai import providers as PR
@@ -156,6 +157,20 @@ def _agentd_call(path, payload):
         return 502, {"ok": False, "error": "agentd 不可用：%s" % type(e).__name__}
 
 AGENTD_URL = os.environ.get("PAI_AGENTD_URL", "http://127.0.0.1:8766")
+UI_NONCE = secrets.token_urlsafe(32)
+STARTUP_REPORT = {}
+
+
+def _startup_step(name, fn, critical=False):
+    try:
+        fn()
+        STARTUP_REPORT[name] = {"ok": True}
+        return True
+    except Exception as e:
+        STARTUP_REPORT[name] = {"ok": False, "error": "%s: %s" % (type(e).__name__, e)}
+        if critical:
+            raise
+        return False
 AGENTD_TOKEN = os.environ.get("PAI_AGENTD_TOKEN_QODER", "")
 M1_DIR = Path(__file__).resolve().parent / "web"
 MAX_BODY = 64 * 1024          # 本机单人用；超限直接拒，免得一个烂请求吃掉内存
@@ -222,7 +237,7 @@ def _persona_rule():
 
 def _memory_rule(text):
     try:
-        return MM.prompt_block(text)
+        return MMEM.prompt_block(text)
     except Exception:
         return ""
 
@@ -437,7 +452,11 @@ def _approval_ok(payload, kind):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PAI/0.5"
+    try:
+        _vp = Path(__file__).resolve().parent.parent / "version.json"
+        server_version = "PAI/" + json.loads(_vp.read_text(encoding="utf-8")).get("version", "1.1.0")
+    except Exception:
+        server_version = "PAI/1.1.0"
 
     def log_message(self, *a):
         pass                      # 不打印请求体，避免把用户说的话刷进终端历史
@@ -475,6 +494,22 @@ class Handler(BaseHTTPRequestHandler):
         self._send(403, {"error": "只允许本机页面调用"})
         return True
 
+    def _ui_gate(self):
+        raw = (self.headers.get("Origin") or self.headers.get("Referer") or "").strip()
+        if not raw or not _local_host(raw):
+            self._send(403, {"ok": False, "error": "审批必须由本机页面发起"})
+            return False
+        if str(self.headers.get("X-DSH-Nonce") or "") != UI_NONCE:
+            self._send(403, {"ok": False, "error": "缺少或错误的页面 nonce"})
+            return False
+        return True
+
+    def _html(self, body):
+        try:
+            return body.replace(b"</head>", ('<script>window.__DSH_NONCE__="%s";</script></head>' % UI_NONCE).encode("utf-8"))
+        except Exception:
+            return body
+
     def do_GET(self):
         try:
             self._do_GET()
@@ -489,76 +524,79 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self._blocked_origin():
             return
-        if self.path == "/":
-            self._send(200, PAGE.encode("utf-8"), "text/html; charset=utf-8")
+        if self.path in ("/", "/m1", "/m1/"):
+            self.send_response(302)
+            self.send_header("Location", "/chat")
+            self.end_headers()
         elif self.path == "/dashboard":
             try:
                 body = DASH_PATH.read_text(encoding="utf-8").encode("utf-8")
             except OSError:
                 self._send(500, {"error": "dashboard.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path.split("?", 1)[0] in ("/chat", "/chat/"):
             try:
                 body = (M1_DIR / "chat.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "chat.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/approvals":
             try:
                 body = (M1_DIR / "approvals.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "approvals.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/templates":
             try:
                 body = (M1_DIR / "templates.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "templates.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/graph":
             try:
                 body = (M1_DIR / "graph.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "graph.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/mcp":
             try:
                 body = (M1_DIR / "mcp.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "mcp.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/plans":
             try:
                 body = (M1_DIR / "plans.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "plans.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/files":
             try:
                 body = (M1_DIR / "files.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "files.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/security":
             try:
                 body = (M1_DIR / "security.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "security.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/api/plans":
             out = []
             for p in JR.list_plans(20):
                 jobs = JR.plan_jobs(p["id"])
-                out.append({"plan": p, "jobs": jobs})
+                files = [x for x in JR.list_file_proposals("pending") if x.get("plan_id") == p["id"]]
+                out.append({"plan": p, "jobs": jobs, "files": files})
             self._send(200, {"items": out})
         elif self.path == "/api/files/pending":
             self._send(200, {"items": JR.list_file_proposals("pending")})
@@ -575,28 +613,21 @@ class Handler(BaseHTTPRequestHandler):
             except OSError:
                 self._send(500, {"error": "usage.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/audit":
             try:
                 body = (M1_DIR / "audit.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "audit.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/memory":
             try:
                 body = (M1_DIR / "memory.html").read_bytes()
             except OSError:
                 self._send(500, {"error": "memory.html 缺失"})
             else:
-                self._send(200, body, "text/html; charset=utf-8")
-        elif self.path in ("/m1", "/m1/"):
-            try:
-                body = (M1_DIR / "index.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "M1 页面缺失"})
-            else:
-                self._send(200, body, "text/html; charset=utf-8")
+                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path.startswith("/m1/"):
             name = self.path[len("/m1/"):]
             if not name or "/" in name or chr(92) in name or name.startswith("."):
@@ -662,7 +693,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"ok": True, "model": M10.active_provider(),
                              "version": _version(),
                              "db": str(db_path), "db_exists": Path(db_path).exists(),
-                             "agentd": AGENTD_URL})
+                             "agentd": AGENTD_URL,
+                             "approval_mode": (os.environ.get("PAI_APPROVAL_MODE") or "ledger"),
+                             "startup": dict(STARTUP_REPORT)})
         elif self.path == "/api/reminders/pending":
             rows = mem.read_outbox(unread_only=True) if mem is not None else []
             self._send(200, {"items": rows})
@@ -849,7 +882,7 @@ class Handler(BaseHTTPRequestHandler):
                 rows, _ = CP.run(mem)
                 sm = SMR.self_report(mem)
                 data["checked_at"] = datetime.datetime.now().isoformat(timespec="seconds")
-                data["c_score"] = CS.score(mem)
+                data["c_score"] = CSCORE.score(mem)
                 data["c_metrics"] = {
                     "c0_passed": sum(1 for r in rows if r["ok"]),
                     "c0_total": len(rows),
@@ -920,9 +953,11 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/settings/network":
             self._send(200, {"ok": True, **NP.status()})
         elif self.path == "/api/settings/model_mode":
-            self._send(200, {"ok": True, **MM.status()})
+            self._send(200, {"ok": True, **MMODE.status()})
+        elif self.path == "/api/low_spec/status":
+            self._send(200, {"ok": True, **LOWSPEC.status()})
         elif self.path == "/api/settings/low_spec":
-            self._send(200, {"ok": True, **LS.status()})
+            self._send(200, {"ok": True, **LOWSPEC.status()})
         elif self.path == "/api/memory/layers":
             self._send(200, {"ok": True, "items": [
                 {"layer": n, "text": ML.read(n)} for n in ML.LAYERS]})
@@ -972,7 +1007,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/memory_candidates":
             self._send(200, {"items": MC.pending()})
         elif self.path == "/api/mirrai_memory":
-            self._send(200, MM.all())
+            self._send(200, MMEM.all())
         elif self.path.startswith("/api/emotion"):
             q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             t = str((q.get("text") or [""])[0])
@@ -1255,6 +1290,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, {"ok": True})
                 return
             if self.path == "/api/approvals/execute":
+                if not self._ui_gate():
+                    return
                 rec = TOK.take(str(payload.get("id") or ""))
                 if not rec:
                     self._send(404, {"ok": False, "error": "没有待审批记录"})
@@ -1285,9 +1322,13 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(500, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
             if self.path == "/api/approvals/approve":
+                if not self._ui_gate():
+                    return
                 self._send(200, {"ok": True, "token": TOK.approve_id(payload.get("id"))})
                 return
             if self.path == "/api/approvals/deny":
+                if not self._ui_gate():
+                    return
                 self._send(200, {"ok": TOK.deny_id(payload.get("id"))})
                 return
             if self.path == "/api/qwen_agent/toggle":
@@ -1307,6 +1348,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, {"ok": True, "enabled": on, "tools": TOOLS.list_tools()})
                 return
             if self.path == "/api/approval/request":
+                if not self._ui_gate():
+                    return
                 kind = str(payload.get("kind") or "").strip()
                 if kind not in ("browser", "desktop", "mcp", "code", "login", "persona", "memory", "agent", "workspace"):
                     self._send(400, {"ok": False, "error": "未知审批类型"})
@@ -1758,7 +1801,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not q:
                     self._send(400, {"ok": False, "error": "缺 q"})
                     return
-                self._send(200, {"ok": True, "results": LS.search(mem, q, 5)})
+                self._send(200, {"ok": True, "results": LSEARCH.search(mem, q, 5)})
                 return
             if self.path == "/api/search":
                 q = str(payload.get("q") or "").strip()
@@ -1988,7 +2031,41 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
+            if self.path == "/api/plans/reflect":
+                if not self._ui_gate():
+                    return
+                try:
+                    pid = str(payload.get("id") or "")
+                    plan = JR.get_plan(pid)
+                    if not plan:
+                        raise ValueError("规划不存在")
+                    jobs = JR.plan_jobs(pid)
+                    body = "\n".join("步骤 %d：%s\n结果：%s" % (
+                        j.get("step_index", 0) + 1, j.get("title"), (j.get("result") or "")[:2000])
+                        for j in jobs)
+                    prompt = ("你是独立质检员。检查下面计划的执行结果，只指出错漏/未完成/前后矛盾，"
+                              "结论必须明确：通过，或列出要改的地方。\n目标：%s\n%s" % (plan.get("goal"), body))
+                    outs = M10.complete(prompt, opts={"temperature": 0.2})
+                    text = str((outs[0] if outs else {}).get("output") or "")
+                    JR.set_plan_reflection(pid, text)
+                    EG.audit("plan_reflect", "medium", "allow", pid, text[:500])
+                    self._send(200, {"ok": True, "reflection": text, "plan": JR.get_plan(pid)})
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/plans/file":
+                if not self._ui_gate():
+                    return
+                try:
+                    out = JR.create_file_proposal(payload.get("filename"), payload.get("content"),
+                                                  payload.get("id") or "", int(payload.get("step_index") or 0))
+                    self._send(200, out)
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
             if self.path == "/api/plans/step":
+                if not self._ui_gate():
+                    return
                 try:
                     pid = str(payload.get("id") or "")
                     jobs = [x for x in JR.plan_jobs(pid) if x.get("status") == "pending"]
@@ -2005,12 +2082,16 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
             if self.path == "/api/files/approve":
+                if not self._ui_gate():
+                    return
                 try:
                     self._send(200, JR.approve_file_proposal(payload.get("id")))
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
             if self.path == "/api/files/reject":
+                if not self._ui_gate():
+                    return
                 self._send(200, JR.reject_file_proposal(payload.get("id")))
                 return
             if self.path == "/api/network/allow":
@@ -2033,13 +2114,21 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.path == "/api/settings/model_mode":
                 try:
-                    self._send(200, {"ok": True, **MM.apply(str(payload.get("mode") or ""))})
+                    self._send(200, {"ok": True, **MMODE.apply(str(payload.get("mode") or ""))})
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/low_spec/unload":
+                if not self._ui_gate():
+                    return
+                try:
+                    self._send(200, {"ok": True, **LOWSPEC.unload_models()})
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
             if self.path == "/api/settings/low_spec":
                 try:
-                    out = LS.enable() if bool(payload.get("enabled")) else LS.disable()
+                    out = LOWSPEC.enable() if bool(payload.get("enabled")) else LOWSPEC.disable()
                     self._send(200, {"ok": True, **out})
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
@@ -2257,7 +2346,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.path == "/api/mirrai_memory":
                 try:
-                    out = MM.add(str(payload.get("title") or ""),
+                    out = MMEM.add(str(payload.get("title") or ""),
                                  str(payload.get("body") or ""),
                                  str(payload.get("category") or "memory"),
                                  bool(payload.get("anchor")))
@@ -2349,8 +2438,10 @@ def start(port=DEFAULT_PORT, db_path=None, quiet=False, ready_timeout=10):
             orch = Orchestrator(mem)
             tasks = TL.TaskLedger(Path(path).parent / "tasks.db")
             skills = SL.SkillLibrary(PF.skills_dir())
-            convs = CS.ConversationStore(Path(path).parent / "conversations.db")
+            convs = CONV.ConversationStore(Path(path).parent / "conversations.db")
+            STARTUP_REPORT["core"] = {"ok": True}
         except Exception as e:
+            STARTUP_REPORT["core"] = {"ok": False, "error": "%s: %s" % (type(e).__name__, e)}
             failed.append(e)
             ready.set()
             return
@@ -2371,20 +2462,12 @@ def start(port=DEFAULT_PORT, db_path=None, quiet=False, ready_timeout=10):
         raise RuntimeError("本机界面启动超时（记忆库可能被别的进程占着）")
     if failed:
         raise failed[0]
-    try:
-        JW.start_background(interval=60, dry_run=False)
-    except Exception:
-        pass
-    try:
-        threading.Thread(target=UNI.run_reminder_loop, args=(mem,), daemon=True,
-                         name="pai-reminders").start()
-    except Exception:
-        pass
-    try:
-        threading.Thread(target=PA.run_background, args=(None, 300, PF.current()), daemon=True,
-                         name="pai-proactive").start()
-    except Exception:
-        pass
+    _startup_step("jobs", lambda: JW.start_background(interval=60, dry_run=False))
+    _startup_step("reminders", lambda: threading.Thread(
+        target=UNI.run_reminder_loop, args=(mem,), daemon=True, name="pai-reminders").start())
+    _startup_step("proactive", lambda: threading.Thread(
+        target=PA.run_background, args=(None, 300, PF.current()), daemon=True,
+        name="pai-proactive").start())
     def _memory_loop():
         import time
         while True:
@@ -2393,10 +2476,8 @@ def start(port=DEFAULT_PORT, db_path=None, quiet=False, ready_timeout=10):
             except Exception:
                 pass
             time.sleep(3600)
-    try:
-        threading.Thread(target=_memory_loop, daemon=True, name="pai-memory").start()
-    except Exception:
-        pass
+    _startup_step("memory_loop", lambda: threading.Thread(
+        target=_memory_loop, daemon=True, name="pai-memory").start())
     if not quiet:
         # flush：双击打开时这行"已启动"必须马上出现，否则用户以为没反应。
         # 输出被重定向时 stdout 是块缓冲，不 flush 就会一直卡在缓冲区里。
@@ -2450,19 +2531,17 @@ def main(argv=None):
     TOOLS.apply_saved()
     _apply_agent_engine()
     _apply_fallbacks()
+    os.environ.setdefault("PAI_APPROVAL_MODE", "ledger")
     os.environ.setdefault("PAI_JOB_RUNNER", "on")
     os.environ.setdefault("PAI_JOB_WORKER", "on")
     MS.apply()
-    try:
-        from pai import low_spec as LS
-        from pai import model_mode as MM
-        LS.apply()
-        MM.startup_apply()
-        CUS.apply()
-        NP.apply()
-        PR.apply()
-    except Exception:
-        pass
+    from pai import low_spec as LOWSPEC
+    from pai import model_mode as MMODE
+    _startup_step("low_spec", LOWSPEC.apply)
+    _startup_step("model_mode", MMODE.startup_apply)
+    _startup_step("custom_select", CUS.apply)
+    _startup_step("network_policy", NP.apply)
+    _startup_step("providers", PR.apply)
     if ns.profile:
         os.environ["PAI_PROFILE"] = PF.normalize(ns.profile)
     db = Path(ns.db) if ns.db else PF.db_path(ns.profile)

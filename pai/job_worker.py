@@ -6,6 +6,7 @@ from pai import paths
 
 import datetime
 import json
+import re
 import os
 import pathlib
 import threading
@@ -89,6 +90,44 @@ def _execute(job):
             raise ValueError("不是目录：%s" % p)
         names = sorted(x.name for x in p.iterdir())[:200]
         return {"ok": True, "action": "list_dir", "path": str(p), "items": names}
+    if typ == "agent_step":
+        goal = str(payload.get("goal") or job.get("title") or "")
+        step = str(payload.get("step") or job.get("prompt") or "")
+        prior = str(payload.get("context") or "")
+        if not prior and job.get("depends_on"):
+            prev = JR.get(job.get("depends_on")) or {}
+            prior = str(prev.get("result") or "")[:6000]
+        prompt = (
+            "你是知衡里的执行代理。按目标完成当前这一步，只输出结果，不要解释你是什么模型。\n"
+            "目标：%s\n已完成上下文：%s\n当前步骤：%s\n"
+            "如果需要写文件，必须只输出下面这种格式，不要输出额外正文：\n"
+            "[写文件: report.md]\n文件内容\n[/写文件]\n"
+            "文件名只能是英文/数字/下划线/横线，后缀限 txt/md/csv/json/html/py，不要带路径。"
+            % (JR.untrusted_text("目标", goal), JR.untrusted_text("上下文", prior[-6000:]),
+               JR.untrusted_text("步骤", step))
+        )
+        outs = AIP.complete(prompt)
+        text = str(outs[0].get("output") or "") if outs else ""
+        proposals = []
+        for m in re.finditer(r"\[写文件:\s*([^\]]+)\]\s*\n(.*?)\[/写文件\]", text, re.S):
+            try:
+                proposals.append(JR.create_file_proposal(
+                    m.group(1).strip(), m.group(2).strip("\n"),
+                    plan_id=str(job.get("plan_id") or ""),
+                    step_index=int(job.get("step_index") or 0)))
+            except Exception as e:
+                proposals.append({"error": "%s: %s" % (type(e).__name__, e)})
+        if not proposals and re.search(r"(写|保存|生成|输出|整理).*(文件|报告|周报|文档|表格)|"
+                                       r"(文件|报告|周报|文档|表格).*(写|保存|生成|输出|整理)", step):
+            try:
+                name = "plan-step-%s.md" % (int(job.get("step_index") or 0) + 1)
+                proposals.append(JR.create_file_proposal(
+                    name, text, plan_id=str(job.get("plan_id") or ""),
+                    step_index=int(job.get("step_index") or 0)))
+            except Exception as e:
+                proposals.append({"error": "%s: %s" % (type(e).__name__, e)})
+        return {"ok": bool(text), "action": "agent_step", "step": step,
+                "result": text[:8000], "file_proposals": proposals}
     if typ == "summarize_file":
         p = _safe_path(payload.get("path"))
         if not p.is_file():
@@ -137,7 +176,8 @@ def plan(job):
 
 
 def _daily_path():
-    return os.environ.get("PAI_DAILY_SUMMARY_PATH") or r"D:\DSH\收益线\内容_WorkBuddy副业10项\发布记录.md"
+    from pai import paths
+    return os.environ.get("PAI_DAILY_SUMMARY_PATH") or str(paths.DATA_DIR / "daily_summary.md")
 
 
 def ensure_daily_job(now=None):

@@ -82,6 +82,8 @@ OPENAI_LIKE = {
     "openai": "https://api.openai.com/v1",
     "deepseek": "https://api.deepseek.com/v1",
     "aggregator": "https://openrouter.ai/api/v1",
+    "openrouter": "https://openrouter.ai/api/v1",
+    "groq": "https://api.groq.com/openai/v1",
     "siliconflow": "https://api.siliconflow.cn/v1",
 }
 LOCAL_PROVIDERS = {"ollama"}
@@ -327,7 +329,17 @@ def _complete_many(prompt, models=None, opts=None, on_delta=None, on_reasoning=N
                 cost = float((est or {}).get("cost_cap") or 0.0)
                 priced = True
         elif provider in LOCAL_PROVIDERS:
-            output, t_in, t_out = _ollama_complete(prompt, name, opts, on_delta=on_delta)
+            low = (os.environ.get("PAI_LOW_SPEC") or "").strip().lower() in ("1", "on", "true", "yes")
+            if low:
+                from pai import low_spec as LS
+                if not LS.memory_status().get("can_load"):
+                    raise ModelGatewayError("低配内存预算不足：%s" % LS.memory_status())
+                LS.acquire()
+            try:
+                output, t_in, t_out = _ollama_complete(prompt, name, opts, on_delta=on_delta)
+            finally:
+                if low:
+                    LS.release()
             cost, priced = 0.0, True
             est = {"cost_cap": 0.0, "line": "[报账] provider=ollama 本地推理，无云端费用"}
         else:

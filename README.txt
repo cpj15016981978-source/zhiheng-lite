@@ -1,7 +1,18 @@
 ========================================================================
-个人 AI 系统 · 本机可用版（Phase5.8：会看脸色 + 有稳定身份 + 已接真实模型 + 能开口说话）
-                                    —— 运行与验证说明
+知衡 1.1.0 · Windows 本机开发版
+—— 运行与验证说明
 ========================================================================
+
+平台与依赖（先看这段）
+--------
+- 仅支持 Windows。代码使用 DPAPI、WINFUNCTYPE、PowerShell、注册表等 Windows 能力。
+- 没有跨平台承诺；macOS/Linux 需要另开移植，不是当前分支的目标。
+- 不是“零第三方依赖”。实际运行时依赖见 requirements.txt：
+  pypdf、python-docx、openpyxl、zhconv、vosk、apscheduler、qwen-agent、soundfile 等。
+- 本地模型、DeepSeek/OpenAI 兼容 API、Qwen-Agent 都是可选路径；具体以设置页为准。
+- 许可证：Apache License 2.0，见 LICENSE、NOTICE、THIRD_PARTY.md。
+- 安全边界与报告方式：见 SECURITY.md。
+- 首次启动自动创建 %LOCALAPPDATA%\Zhiheng\data；程序目录不写用户数据。
 
 这是什么
 --------
@@ -224,7 +235,7 @@ Phase5.6 再证【它会看脸色（但只当估计）+ 两轮之间是同一个
 
 技术栈（ADR-005）
 ----------------
-Python 3.13 + 标准库 sqlite3 + 命令行。零第三方依赖、零安装。
+Python 3.13 + sqlite3 + 若干第三方解析/语音库；Windows 本机安装。依赖清单以 requirements.txt 为准，不再声称零第三方依赖。
 模型默认仍是 mock（ADR-006）——不设 PAI_MODEL_PROVIDER 就永远不联网；
 显式配了密钥与 provider 才走真实模型（本机已配好 MiniMax，见"接真实模型"一节）。
 反思(M4)、调度(M6)都用确定性规则，不依赖模型、可离线验证；

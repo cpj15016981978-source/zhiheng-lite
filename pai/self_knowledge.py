@@ -27,7 +27,7 @@ CAPABILITY = {
     "network": False,
     "degrade": "关=拒绝报告；校准未测=如实说未测量；坏数据=忽略并说明",
     "probe_cost": "只读环境变量与 meta，不起进程、不联网、不写库（record 除外）",
-    "approval": "未获单独批准：由 DeepSeek 自选推进；默认关。Boss 在对话中提过，但 D:\\Q 无书面留底，不作为授权。",
+    "approval": "未获单独批准：由 DeepSeek 自选推进；默认关。Boss 在对话中提过，但相关目录无书面留底，不作为授权。",
 }
 
 # 能力表：status 只有三种——"有" / "部分" / "没有"；evidence 指向代码或缺口。

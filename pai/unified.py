@@ -243,6 +243,8 @@ def _writing(text):
 
 
 def _misc(text, mem=None):
+    if text.startswith("代理：") or text.startswith("代理:"):
+        text = "规划：" + text[3:].lstrip()
     if text.upper() == "ROI":
         from pai import roi as ROI
         import json
@@ -455,7 +457,7 @@ def _misc(text, mem=None):
             return "还没有规划。用“规划：目标”生成。"
         return "规划：\n" + "\n".join("- %s [%s] %s（%d 步）" % (
             x.get("id"), x.get("status"), x.get("goal"), len(x.get("steps") or [])) for x in rows)
-    m = re.match(r"^规划[:：]\s*(?:生成\s*)?(?!执行)(.+)$", text)
+    m = re.match(r"^规划[:：]\s*(?:生成\s*)?(?!执行|下一步)(.+)$", text)
     if m:
         goal = m.group(1).strip()
         try:
@@ -493,6 +495,8 @@ def _misc(text, mem=None):
         prev = ""
         for i, step in enumerate(plan.get("steps") or []):
             action_type, action_payload = _plan_action(step)
+            action_payload = dict(action_payload or {})
+            action_payload.update({"goal": plan.get("goal") or "", "step": step})
             job = JR.create("规划：" + step[:80], prompt=step, agent="planner",
                             action_type=action_type, action_payload=action_payload,
                             depends_on=prev, plan_id=plan["id"], step_index=i)
@@ -646,7 +650,7 @@ def _plan_action(step):
     m = re.match(r"^(?:总结|摘要|归纳)\s+(.+)$", text)
     if m:
         return "summarize_file", {"path": m.group(1).strip()}
-    return "noop", {}
+    return "agent_step", {}
 
 
 def _office_cmd(q, mem):

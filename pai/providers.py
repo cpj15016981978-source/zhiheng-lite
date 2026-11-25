@@ -26,7 +26,8 @@ CAPABILITY = {
 
 ENV = {"deepseek": "DEEPSEEK_API_KEY", "openai": "OPENAI_API_KEY",
        "zhipu": "ZHIPU_API_KEY", "moonshot": "MOONSHOT_API_KEY",
-       "siliconflow": "SILICONFLOW_API_KEY"}
+       "siliconflow": "SILICONFLOW_API_KEY", "groq": "GROQ_API_KEY",
+       "openrouter": "OPENROUTER_API_KEY"}
 
 
 class _DATA_BLOB(ctypes.Structure):

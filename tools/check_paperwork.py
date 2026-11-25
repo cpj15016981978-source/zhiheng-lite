@@ -57,9 +57,11 @@ import re
 import sys
 from pathlib import Path
 
-DEFAULT_ROOT = Path(os.environ.get("PAI_PAPERWORK_ROOT", r"D:\Q"))
+_HERE = Path(__file__).resolve().parent
+
+DEFAULT_ROOT = Path(os.environ.get("PAI_PAPERWORK_ROOT") or _HERE.parent)
 # 发布位那支脊柱黑板：真要入库的那份字节在这里，过去不在面内（面只盖 D:\Q 那两支）。
-SPINE_ROOT = Path(os.environ.get("PAI_SPINE_ROOT", r"C:\Users\Administrator\Documents\Qoder\2026-10-19\14868c32\personal-ai-system"))
+SPINE_ROOT = Path(os.environ.get("PAI_SPINE_ROOT") or _HERE.parent)
 SPINE_BOARD = SPINE_ROOT / "00_协作规程与接口契约.txt"
 SPINE_REL = "发布位脊柱/00_协作规程与接口契约.txt"
 BOARD_NAMES = ("00_协作规程与接口契约.txt", "personal-ai-system/00_协作规程与接口契约.txt")

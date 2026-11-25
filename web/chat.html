@@ -2377,7 +2377,7 @@
 
   async function approvalToken(kind, detail) {
     try {
-      const r = await fetch('/api/approval/request', {method:'POST', headers:{'Content-Type':'application/json'},
+      const r = await fetch('/api/approval/request', {method:'POST', headers:{'Content-Type':'application/json','X-DSH-Nonce': window.__DSH_NONCE__ || ''},
         body: JSON.stringify({kind, detail: detail || ''})});
       const d = await r.json();
       return r.ok ? (d.token || '') : '';

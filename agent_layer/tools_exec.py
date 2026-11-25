@@ -15,7 +15,7 @@ if str(_ROOT) not in sys.path:
 
 from pai import exec_guard as EG  # noqa: E402
 
-ROOT = Path(os.environ.get("AGENT_TOOL_ROOT", r"D:\DSH")).resolve()
+ROOT = Path(os.environ.get("AGENT_TOOL_ROOT") or (Path.home() / "ZhihengTools")).resolve()
 SANDBOX = (Path(__file__).resolve().parent / "data" / "sandbox").resolve()
 MAX_BYTES = 100_000
 DENY_NAMES = {"tokens.json", "memory.db", "agentd.db", "audit.jsonl", "keys.json"}
