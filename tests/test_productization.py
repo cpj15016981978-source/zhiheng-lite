@@ -18,8 +18,8 @@ class ProductizationTest(unittest.TestCase):
 
     def test_version_single_source(self):
         v = json.loads((ROOT / "version.json").read_text(encoding="utf-8"))
-        self.assertEqual(v["version"], "1.1.0")
-        self.assertIn("1.1.0", (ROOT / "README.txt").read_text(encoding="utf-8"))
+        self.assertEqual(v["version"], "1.2.0-dev")
+        self.assertIn("1.2.0-dev", (ROOT / "README.txt").read_text(encoding="utf-8"))
 
     def test_data_dir_is_not_repo_data(self):
         from pai import paths
