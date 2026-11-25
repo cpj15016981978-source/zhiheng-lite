@@ -42,7 +42,7 @@
 - Groq：https://console.groq.com/keys（注册后建一个 key）
 - OpenRouter :free：https://openrouter.ai/keys（注册后建一个 key，模型名带 `:free` 的都是免费）
 
-key 只存在你电脑上的 `muse_config.json`，不上传、不发给别人。
+key 只存在你电脑上的 `muse_config.json`，不上传、不发给别人；该文件是**明文**，没有加密。聊天和记忆存在 `local_office_memory.db`，也是本机文件。
 
 ## 有什么功能
 

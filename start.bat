@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title LowSpec Muse v1
+title LowSpec Muse v2.1
 cd /d %~dp0
 python --version >nul 2>&1
 if errorlevel 1 (

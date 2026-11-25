@@ -11,3 +11,12 @@ data/
 models/
 runtime/
 *.log
+
+# Muse 本机数据：绝不进版本库
+muse_config.json
+local_office_memory.db
+*.db
+workspace/
+scripts/
+models/
+runtime/

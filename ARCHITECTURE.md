@@ -2,13 +2,13 @@
 
 ```text
 Browser (static/index.html)
-        │  POST /api/chat
+        │  HTTP 127.0.0.1:8080
         ▼
-app.py  ──────────────►  core_model  ──►  llama.cpp  ──►  models/core.gguf
-        │
-        └── GET /api/health
-
-cli.py  ── serve / chat / model status / doctor / version
+app.py
+  ├─ SQLite: local_office_memory.db
+  │    memories / plans / plan_steps / pending_files / tasks / scripts
+  ├─ API mode: Groq / OpenRouter
+  └─ local mode: Ollama
 ```
 
 ## Components
@@ -17,56 +17,52 @@ cli.py  ── serve / chat / model status / doctor / version
 
 Small standard-library HTTP server:
 
-- serves the single-page UI
-- exposes `/api/health`
-- loads exactly one bundled core model through llama.cpp
-- binds loopback by default
-- does not write files
+- serves the single-page UI from `static/index.html`
+- exposes chat, memory, plan, file-approval, task, and settings endpoints
+- binds loopback only by default (`HOST = "127.0.0.1"`, `PORT = 8080`)
+- persists conversations and tasks in `local_office_memory.db`
+- stores provider settings, including the API key, in `muse_config.json`
+- writes approved files only under `workspace/`
+- auto mode tries API first, then falls back to local Ollama
 
-### `cli.py`
+### `muse_config.json`
 
-The supported command-line surface:
-
-```text
-serve        start the UI
-chat         one-shot or REPL
-model status check the bundled core model
-doctor       environment diagnostics
-version      configured model and port
-```
-
-### `config.json`
-
-The only configuration source:
+The only runtime configuration source:
 
 ```text
-provider, core model path, runtime path, host, port, num_ctx, timeout, system prompt
+mode, provider, api_key, api_model, local_main, local_code, host, port, system
 ```
 
-No environment-specific paths.
+This file is local-only and is git-ignored. It is not encrypted.
+
+### `start.bat`
+
+Installs the Python dependencies, starts Ollama if available, opens
+`http://127.0.0.1:8080`, and runs `app.py`.
 
 ## State
 
-There is no server-side state:
+The app is stateful:
 
 ```text
-No messages persisted
-No database
-No embeddings
-No scheduler
-No user profile
+SQLite memory and plans: local_office_memory.db
+Provider key:            muse_config.json
+Approved output files:   workspace/
+Generated code:          scripts/
+Scheduled tasks:         SQLite tasks table + background scheduler
 ```
 
-The browser keeps the current conversation in memory only.
+No server-side state is exposed outside loopback by default.
 
 ## Trust boundaries
 
 ```text
-Browser input  → untrusted text
-llama.cpp      → local process, bundled runtime
-Server         → loopback only by default
-Filesystem     → read-only for the server
-Shell          → not used
+Browser input     → untrusted text
+Groq/OpenRouter   → external services when API mode is used
+Ollama            → local process
+SQLite            → local memory store
+Filesystem        → only workspace/ is writable after approval
+Shell             → not used by the app
 ```
 
 ## Non-goals
@@ -74,7 +70,6 @@ Shell          → not used
 - multi-user hosting
 - remote access by default
 - plugin marketplace
-- long-term memory
-- autonomous code execution
-
-Those belong to separate projects or forks.
+- MCP
+- encrypted credential storage
+- OS-level sandboxing

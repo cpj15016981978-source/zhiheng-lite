@@ -1,84 +1,43 @@
-# Publish Zhiheng Lite
-
-The source repository is small. The runnable Windows release is about 2.3 GB,
-so it cannot be committed to Git or uploaded as one GitHub release asset.
+# Publish LowSpec Muse
 
 ## What goes where
 
 ```text
-GitHub / Gitee / GitCode
-  source code, docs, tests, placeholder folders
+GitHub / Gitee
+  app.py, static/, tests/, docs, README, LICENSE
 
-Release assets
-  ZhihengLite-0.3.0-win64.zip.part1
-  ZhihengLite-0.3.0-win64.zip.part2
-  SHA256SUMS.txt
+Release assets (if a bundled runtime is added)
+  Windows package parts + SHA256SUMS.txt
 ```
 
 ## GitHub
 
-1. Create an empty repository, for example `zhiheng-lite`.
-2. Push this folder:
+1. Create or use a repository, for example `zhiheng-lite`.
+2. Push the source folder.
+3. Do not commit `muse_config.json`, `local_office_memory.db`, `workspace/`,
+   `scripts/`, model files, or runtime binaries.
+4. If publishing a bundled release, use release assets rather than Git history.
 
-```bash
-git remote add origin https://github.com/<account>/zhiheng-lite.git
-git branch -M main
-git push -u origin main
-```
-
-3. Create a release tag `v0.3.0`.
-4. Upload the split parts and `SHA256SUMS.txt` as release assets.
-5. Put the download links in `README.md`.
-
-GitHub limits each release asset to 2 GB; each part is below 1.5 GB.
-
-## Gitee
-
-1. Create `zhiheng-lite` on Gitee.
-2. Push the same source repository.
-3. Gitee release asset limits are smaller; do not upload the 2.3 GB package
-   there.
-4. Put the model/runtime package on a domestic file host and link it from the
-   Gitee release notes, or publish the source-only repo and point to GitHub
-   Releases for the binary.
-
-## GitCode
-
-Same as Gitee: source repository plus an external binary link.
-
-## Rebuild the Windows package
+## Rebuild the audit surface
 
 ```powershell
-cd D:\DSH\ZhihengLite
-tar.exe -a -c -f D:\DSH\dist\ZhihengLite-0.3.0-win64.zip `
-  app.py core_model.py cli.py config.json README.md CONTRIBUTING.md `
-  ARCHITECTURE.md SECURITY.md LICENSE MODEL_NOTICE.md .gitignore `
-  static tests models runtime
+python -m unittest discover -s tests -v
+python app.py
 ```
 
-Then split it:
-
-```powershell
-.\tools\split_release.ps1
-```
-
-## Checks
+Expected:
 
 ```text
-Run: python cli.py doctor
-Run: python cli.py serve
-Open: http://127.0.0.1:8760
-Confirm: /api/health provider=core, ok=true
-Confirm: no Ollama process required
+http://127.0.0.1:8080
+/api/health returns ok
 ```
 
 ## Before publishing
 
 ```text
-[ ] Replace <account> placeholders
-[ ] Add real repository URL to README
-[ ] Confirm Qwen3 Apache-2.0 attribution
-[ ] Confirm llama.cpp MIT notice
-[ ] Upload both parts + SHA256SUMS.txt
-[ ] Test download/join/run on a clean machine
+[ ] .gitignore covers muse_config.json, *.db, workspace/, scripts/
+[ ] No API key in tracked files
+[ ] No chat/memory database in tracked files
+[ ] README run instructions match app.py port
+[ ] SECURITY.md describes plaintext key and SQLite persistence
 ```

@@ -4,13 +4,13 @@ Thanks for considering a contribution.
 
 ## Scope
 
-Zhiheng Lite intentionally stays small:
+LowSpec Muse intentionally stays small:
 
-- One local model
-- No database
-- No long-term memory
-- No accounts or cloud API
-- Standard library only
+- one Python HTTP app (`app.py`)
+- SQLite memory
+- Groq / OpenRouter free API plus local Ollama fallback
+- step-by-step plans
+- file approval into `workspace/`
 
 Please open an issue before adding a feature that changes these boundaries.
 
@@ -18,11 +18,12 @@ Please open an issue before adding a feature that changes these boundaries.
 
 ```bash
 python -m unittest discover -s tests -v
-python cli.py doctor
-python cli.py serve
+python app.py
 ```
 
-Requires Python 3.10+ and the release assets `runtime/llama-server.exe` and `models/core.gguf`.
+Requires Python 3.10+, plus `ollama` and `schedule`.
+
+Open `http://127.0.0.1:8080` after starting the app.
 
 ## Pull requests
 
@@ -30,7 +31,8 @@ Requires Python 3.10+ and the release assets `runtime/llama-server.exe` and `mod
 2. Add or update a standard-library test.
 3. Run the full test suite.
 4. Update `README.md` if behavior changes.
-5. Do not commit local paths, credentials, model files, or chat data.
+5. Do not commit `muse_config.json`, `local_office_memory.db`, `workspace/`,
+   `scripts/`, model files, credentials, or chat data.
 
 ## Security-sensitive changes
 
@@ -47,10 +49,10 @@ Never add arbitrary shell execution to the core.
 
 ## Style
 
-- Python standard library only
+- Python standard library only where practical
 - Small functions, explicit errors
 - No hidden network calls
-- English identifiers and comments; Chinese docs are welcome in `docs/`
+- English identifiers; Chinese docs are welcome
 
 ## License
 
