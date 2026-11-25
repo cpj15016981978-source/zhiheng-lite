@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "tiers": {
+    "contract": {
+      "budget_s": 25,
+      "tests": [
+        "test_capability_contract",
+        "test_tool_entry_surface",
+        "test_contract_master",
+        "test_secret_guard",
+        "test_spend_guard"
+      ],
+      "checks": [
+        [
+          "tools/check_capability.py"
+        ],
+        [
+          "tools/check_contract_master.py"
+        ]
+      ]
+    },
+    "quick": {
+      "budget_s": 300,
+      "extends": "push",
+      "tests": [
+        "test_prompt_golden",
+        "test_backup"
+      ],
+      "checks": [
+        [
+          "tools/check_paperwork.py"
+        ],
+        [
+          "tools/check_commits.py",
+          "--audit"
+        ]
+      ]
+    },
+    "full": {
+      "budget_s": 1200,
+      "mode": "discover"
+    },
+    "push": {
+      "budget_s": 180,
+      "extends": "contract",
+      "tests": [
+        "test_persona_prompt",
+        "test_writing_style",
+        "test_correction_rules",
+        "test_memory",
+        "test_model_gateway",
+        "test_offline",
+        "test_self_model",
+        "test_gates_p171",
+        "test_mirrai_emotion",
+        "test_mirrai_persona_memory",
+        "test_model_fallback",
+        "test_relationship_graduation",
+        "test_job_runner",
+        "test_proactive_jobs",
+        "test_job_worker",
+        "test_daily_summary",
+        "test_emotion_model",
+        "test_emotion_eval",
+        "test_cascade_shadow",
+        "test_atomic_write"
+      ]
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "知衡 · 时中",
+  "short_name": "知衡",
+  "start_url": "/chat",
+  "display": "standalone",
+  "background_color": "#0b1118",
+  "theme_color": "#0b1118",
+  "icons": [
+    {
+      "src": "/m1/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

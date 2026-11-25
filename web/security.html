@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 安全</title>
+<style>body{margin:0;background:#f5f2ec;color:#2a2722;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}main{max-width:980px;margin:0 auto;padding:24px}h1{font-size:18px;margin:0 0 4px}p{color:#80776a;font-size:12px;margin:0 0 16px}h2{font-size:15px;margin:20px 0 8px}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d9d1c2}th,td{padding:7px;border-bottom:1px solid #eee;font-size:12px;text-align:left}th{background:#f0ece4}.ok{color:#0d6b3b}.no{color:#a3342a}.row{display:flex;gap:8px;margin-top:8px}input{flex:1;padding:7px;border:1px solid #d9d1c2;border-radius:8px;background:#fff}button{border:1px solid #8a5a2b;background:#fff;color:#8a5a2b;border-radius:8px;padding:6px 10px;cursor:pointer}</style></head>
+<body><main><h1>安全</h1><p>只显示“是否配置”，不显示 Key 值；出网白名单本机生效。</p>
+<h2>API Key</h2><table><thead><tr><th>名称</th><th>类型</th><th>Base</th><th>状态</th></tr></thead><tbody id="creds"></tbody></table>
+<h2>视觉 Key（SiliconFlow）</h2><div class="row"><input id="visionKey" type="password" placeholder="SiliconFlow API Key，用于看图回答" /><button id="visionSave">保存</button></div><div id="visionMsg" class="muted"></div>
+<h2>出网白名单</h2><div class="row"><input id="host" placeholder="例如 api.deepseek.com" /><button id="add">添加</button></div><table style="margin-top:8px"><thead><tr><th>主机</th><th>操作</th></tr></thead><tbody id="hosts"></tbody></table>
+</main><script>
+async function load(){
+ const r=await fetch('/api/credentials'); const d=await r.json();
+ const rows=[]; (d.providers||[]).forEach(x=>rows.push([x.name,'内置',x.base_url||'-',x.configured])); (d.custom||[]).forEach(x=>rows.push([x.name,'自定义',x.base_url||'-',x.configured]));
+ document.querySelector('#creds').innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+esc(x[1])+'</td><td>'+esc(x[2])+'</td><td class="'+(x[3]?'ok':'no')+'">'+(x[3]?'已配置':'未配置')+'</td></tr>').join(''):'<tr><td colspan="4">暂无</td></tr>';
+ const hs=(d.network||{}).allowed_hosts||[];
+ document.querySelector('#hosts').innerHTML=hs.map(h=>'<tr><td>'+esc(h)+'</td><td><button data-del="'+esc(h)+'">删除</button></td></tr>').join('')||'<tr><td colspan="2">空</td></tr>';
+ document.querySelectorAll('button[data-del]').forEach(b=>b.onclick=async()=>{await fetch('/api/network/allow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host:b.dataset.del,action:'remove'})});load();});
+}
+document.querySelector('#add').onclick=async()=>{const h=document.querySelector('#host').value.trim();if(!h)return;await fetch('/api/network/allow',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host:h,action:'add'})});document.querySelector('#host').value='';load();};
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+document.querySelector('#visionSave').onclick=async()=>{const k=document.querySelector('#visionKey').value.trim();if(!k){document.querySelector('#visionMsg').textContent='Key 不能为空';return}const r=await fetch('/api/providers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'siliconflow',key:k,base_url:'https://api.siliconflow.cn/v1'})});const d=await r.json();document.querySelector('#visionMsg').textContent=r.ok?'已保存':'失败：'+(d.error||'');document.querySelector('#visionKey').value='';load();};
+load();
+</script></body></html>

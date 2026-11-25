@@ -1,0 +1,47 @@
+# Phase 1 行走骨架：零第三方依赖（只用 Python 标准库 sqlite3）。
+# 未来阶段接入真实模型/向量检索/Web 时，再在此追加，例如：
+#   fastapi
+#   uvicorn
+#   litellm            # M10 多模型网关
+#   psycopg[binary]    # 上 VPS 后换 PostgreSQL
+#   pgvector
+
+# ── 2026-11-15 P163/P164：Boss 点头「脊柱允许带三方解析库」后追加 ──────────
+# 今天记录在案的运行时依赖共四枚，住址与判据都写清楚（P164 那格有读数）：
+#   规矩三条，写在这里是给下一个换机器的人看，不是给文档看：
+#   1) 除下面这四枚以外，脊柱其余部分仍是标准库-only；要再加第五枚，先上板引 P 号。
+#   2) 缺这些库时脊柱照样起：文本类附件（txt/md/py/json/csv/log/yaml/html/js/ts/sql）
+#      只用标准库解码；ASR 会明确报「未配置」而不是静默走远端。
+#   3) tests/test_file_extract.py 在模块顶层 import docx ⇒ 缺库时那条测试是【收集期炸】，
+#      不是单条红。跑全量前若看到这形状，先 pip install 再判归因（P164 记过这一笔）。
+# 版本于 2026-11-17 锁到权威解释器 D:\QingniaoBundle\python\python.exe (3.13.5)
+# 的 pip freeze 实测值，用 == 而非 >=：范围会随 pip 升级漂移，锁死才叫可复现。
+pypdf==7.0.1           # pai/file_extract.py:20  PDF 取文字（上限 10MB／40 页）
+python-docx==1.2.0     # pai/file_extract.py:29  Word 取段落与表（上限 5 表／30 行）
+openpyxl==3.1.5        # pai/file_extract.py:39  Excel 取格（read_only，上限 5 表／200 行）
+
+# ── 2026-11-17 补：测试环境固化的缺口 ──────────────────────────────────────
+# zhconv 被 pai/poetry_kb.py:13 顶层 import，而 orchestrator.py:29 又导入 poetry_kb，
+# 所以缺它会导致【整条人格/对话链路的测试在收集期就炸】（test_persona_prompt 实测过）。
+# 2026-11-16 评审发现它一直没登记：WorkBuddy 默认解释器缺这枚，跑全量直接
+# ModuleNotFoundError，被误读成"测试坏了"。装配环境时必须装。
+zhconv==1.4.3          # pai/poetry_kb.py:13  简繁转换；人格/诗词链路的硬依赖
+
+# 注意：tkinter 是 Python 编译期组件，pip 装不上。本仓 GUI 无关的后端测试
+# 不需要 tkinter；若跑桌面仓（D:\DSH\chuixue_desktop）测试，需用自带 tkinter 的
+# 解释器（见 tools/run_tests.ps1 的候选清单）。
+
+# ★第四枚不在 Boss 今天那句授权里，别混着念：那句点的是【附件解析库】。
+#   vosk 走的是 pai/asr.py（11-13 进树，14:02 的 455008c 把它接到 /api/asr 与麦克风按钮）。
+#   板上 P 号那一格写过：上 Vosk 要破 ADR-036 第七条「零第三方依赖」，须另立 ADR + Boss 点头；
+#   当时的现量记录是「1b（上 Vosk）与 ③（不做）都没选」。⇒ 这一行只是把机器现状登记齐，
+#   不等于裁定。两件待办另开：①ADR-036 第七条要么改要么让 asr 退回零依赖；
+#   ②pai/asr.py:12 的 DEFAULT_VOSK 指在 D:\DSH\x6_vosk（别人家的目录），
+#     与 P162 款 4 修掉的那两处同一族，挪不挪等 Boss 一句。
+vosk==0.3.45           # pai/asr.py:30/49  本地中文语音识别（模型目录另由 PAI_VOSK_MODEL 指）
+apscheduler>=3.10,<4
+
+
+# ── 2026-11-24：可选 Qwen-Agent 引擎（默认关闭，设置里切换） ──────────────
+qwen-agent==0.0.34
+soundfile==0.14.0

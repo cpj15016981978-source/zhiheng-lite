@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 本机运行数据 / 记忆库 / 日志
+data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.jsonl
+*.log
+*.tmp
+*.bak*
+.env
+*_incoming*/
+
+# 编辑器/系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+nul
+
+# 门禁自产物（2026-11-17 Boss 点头摘出跟踪面）：gates 每跑一遍就往 reports/ 写一份 json，
+# 跟踪它等于让 R1 的分母自己长大——024988e 那笔已经误卷进 7 份，码与板无一处引用。
+# 盘上文件不删（仍是跑过闸门的证据），只是不进版本史、不再被 git add -A 卷走。
+# .gitkeep 留着，克隆出来目录才在。
+reports/*
+!reports/.gitkeep

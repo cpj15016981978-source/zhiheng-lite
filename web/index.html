@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>时中 · 本机</title>
+<link rel="stylesheet" href="/m1/style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="mark">时中</div>
+      <div class="sub">雪夜书房 · 本机</div>
+    </div>
+    <button id="new" class="new">+ 新会话</button>
+    <div class="section-label">会话</div>
+    <div id="sessions" class="sessions"></div>
+    <div class="sidebar-foot">
+      <span id="dot" class="dot"></span>
+      <span id="conn">连接中</span>
+    </div>
+  </aside>
+
+  <main id="chat">
+    <header class="chat-head">
+      <div>
+        <div class="title">时中 <span class="title-sub">雪夜书房</span></div>
+        <div id="model" class="muted">模型：—</div>
+      </div>
+      <div class="head-actions">
+        <div id="status" class="status">idle</div>
+        <button id="panel-toggle" class="panel-toggle" type="button" title="收起/展开右栏">⟩</button>
+      </div>
+    </header>
+    <section id="messages" class="messages" aria-live="polite"></section>
+    <form id="composer" class="composer">
+      <textarea id="input" rows="1" placeholder="直接说——它在听，并且会记住" autocomplete="off"></textarea>
+      <button id="send" type="submit">发送</button>
+    </form>
+    <div class="hint">Enter 发送 · Shift+Enter 换行 · 写操作会转审批</div>
+  </main>
+
+  <aside id="panel">
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="now" type="button">现在</button>
+      <button class="tab" data-tab="memory" type="button">记忆</button>
+      <button class="tab" data-tab="world" type="button">世界</button>
+      <button class="tab" data-tab="approvals" type="button">审批</button>
+      <button class="tab" data-tab="self" type="button">自检</button>
+    </nav>
+
+    <section id="tab-now" class="tabpane active">
+      <div id="health" class="card">
+        <div class="row"><span>模型</span><b id="h-model">—</b></div>
+        <div class="row"><span>数据库</span><b id="h-db">—</b></div>
+        <div class="row"><span>审批服务</span><b id="h-appr">—</b></div>
+      </div>
+      <div class="section-label">证据</div>
+      <div class="legend">
+        <div><i class="e-read"></i> 查到的</div>
+        <div><i class="e-infer"></i> 推断的</div>
+        <div><i class="e-unknown"></i> 不确定</div>
+      </div>
+      <div class="section-label">快捷键</div>
+      <div class="muted small">Ctrl+Alt+Space 开小窗</div>
+    </section>
+
+    <section id="tab-memory" class="tabpane">
+      <div class="section-label">今日一记</div>
+      <div class="daily-card">
+        <select id="mem-kind">
+          <option value="事">事</option>
+          <option value="承诺">承诺</option>
+          <option value="故事">故事</option>
+        </select>
+        <input id="mem-person" type="text" placeholder="谁（可空）" autocomplete="off">
+        <textarea id="mem-what" rows="2" placeholder="发生了什么 / 想记什么"></textarea>
+        <input id="mem-why" type="text" placeholder="为什么重要（可空）" autocomplete="off">
+        <input id="mem-next" type="text" placeholder="下一步 / 欠什么（可空）" autocomplete="off">
+        <button id="mem-save" type="button">记下</button>
+      </div>
+      <div id="mem-card-msg" class="muted small"></div>
+      <div id="mem-cards" class="list"></div>
+      <div class="section-label">事实</div>
+      <input id="mem-search" class="search" type="search" placeholder="搜索记忆…" autocomplete="off">
+      <div id="mem-facts" class="list"></div>
+      <div class="section-label">原则</div>
+      <div id="mem-principles" class="list"></div>
+    </section>
+
+    <section id="tab-world" class="tabpane">
+      <div id="world-empty" class="empty-card">
+        <b>世界模型还没有数据。</b>
+        <div>B0 v0 不会自动从对话里抽取；默认只读。</div>
+        <div>手工新增只在临时库、且开 PAI_WORLD_WRITE=on 时可用；真库会拒绝。</div>
+      </div>
+      <div class="section-label">手工新增（临时库）</div>
+      <div class="world-add">
+        <select id="world-add-type">
+          <option value="person">人物</option>
+          <option value="place">地点</option>
+          <option value="org">组织</option>
+          <option value="thing">物品</option>
+        </select>
+        <input id="world-add-name" type="text" placeholder="名称" autocomplete="off">
+        <input id="world-add-aliases" type="text" placeholder="别名，逗号分隔" autocomplete="off">
+        <button id="world-add-btn" type="button">添加实体</button>
+      </div>
+      <div id="world-add-msg" class="muted small"></div>
+      <div class="section-label">影子候选</div>
+      <div id="world-candidates" class="list"></div>
+      <div class="section-label">写入审批（临时库）</div>
+      <input id="world-gate-token" class="gate-token" type="password" placeholder="审批口令 PAI_WORLD_APPROVE_TOKEN" autocomplete="off">
+      <div id="world-gate" class="list"></div>
+      <div class="section-label">实体</div>
+      <div id="world-entities" class="list"></div>
+      <div class="section-label">关系</div>
+      <div id="world-relations" class="list"></div>
+      <div class="section-label">事件</div>
+      <div id="world-events" class="list"></div>
+    </section>
+
+    <section id="tab-approvals" class="tabpane">
+      <div id="approvals" class="card">
+        <div id="appr-state" class="muted small">加载中…</div>
+        <div id="appr-list"></div>
+        <button id="appr-refresh" class="mini" type="button">刷新</button>
+      </div>
+      <div class="section-label">历史</div>
+      <div class="history-tabs">
+        <button class="htab active" data-hist="all" type="button">全部</button>
+        <button class="htab" data-hist="approved" type="button">已批准</button>
+        <button class="htab" data-hist="executed" type="button">已执行</button>
+      </div>
+      <div id="appr-history" class="list"></div>
+    </section>
+
+    <section id="tab-self" class="tabpane">
+      <div id="self-time" class="muted small">最近自检：—</div>
+      <div id="self-note" class="empty-card">功能自检，不是体验声明。</div>
+      <div id="self-cmetrics" class="card">C0 —</div>
+      <div id="self-score" class="list"></div>
+      <div class="section-label">能力</div>
+      <div id="self-caps" class="list"></div>
+      <div class="section-label">校准</div>
+      <div id="self-calib" class="muted small">—</div>
+    </section>
+  </aside>
+</div>
+<script src="/m1/app.js"></script>
+</body>
+</html>

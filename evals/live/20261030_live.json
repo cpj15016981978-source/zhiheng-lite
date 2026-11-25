@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "prompt": "用一句话说明你是谁",
+  "response": "(openai:MiniMax-M3.1-Flash)\n我记得这些相关的（1 条）：\n  · 你之前说过：“用一句话说明你是谁”\n我的回应：我是一个有中国文化根基、懂人情与生死的陪伴型 AI。",
+  "cost": 0.00091,
+  "tokens": 694,
+  "models": [
+    "openai"
+  ],
+  "max_cost": 0.01
+}

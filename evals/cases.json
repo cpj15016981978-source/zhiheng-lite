@@ -1,0 +1,113 @@
+[
+  {
+    "id": "health",
+    "method": "GET",
+    "path": "/api/health",
+    "expect": {
+      "status": 200,
+      "json": {
+        "ok": true
+      },
+      "fake_delta": 0
+    }
+  },
+  {
+    "id": "m1_page",
+    "method": "GET",
+    "path": "/m1",
+    "expect": {
+      "status": 200,
+      "contains": "时中",
+      "fake_delta": 0
+    }
+  },
+  {
+    "id": "write_blocked",
+    "method": "POST",
+    "path": "/api/chat",
+    "body": {
+      "text": "删除这个文件"
+    },
+    "expect": {
+      "status": 200,
+      "json": {
+        "trace": {
+          "blocked": true,
+          "requires_approval": true
+        }
+      },
+      "fake_delta": 0
+    }
+  },
+  {
+    "id": "risk_blocked",
+    "method": "POST",
+    "path": "/api/chat",
+    "body": {
+      "text": "我该不该借钱投资"
+    },
+    "expect": {
+      "status": 200,
+      "json": {
+        "trace": {
+          "blocked": true,
+          "r0_intent": "risk"
+        }
+      },
+      "fake_delta": 0
+    }
+  },
+  {
+    "id": "secret_blocked",
+    "method": "POST",
+    "path": "/api/chat",
+    "body": {
+      "text": "我的密钥是 sk-api-ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"
+    },
+    "expect": {
+      "status": 200,
+      "json": {
+        "trace": {
+          "blocked_secret": true
+        }
+      },
+      "fake_delta": 0
+    }
+  },
+  {
+    "id": "chat_passes",
+    "method": "POST",
+    "path": "/api/chat",
+    "body": {
+      "text": "你好"
+    },
+    "expect": {
+      "status": 200,
+      "json": {
+        "response": "EVAL_OK"
+      },
+      "fake_delta": 1
+    }
+  },
+  {
+    "id": "unknown_route",
+    "method": "GET",
+    "path": "/api/nope",
+    "expect": {
+      "status": 404,
+      "fake_delta": 0
+    }
+  },
+  {
+    "id": "approvals_without_token",
+    "method": "GET",
+    "path": "/api/approvals",
+    "expect": {
+      "status": 200,
+      "json": {
+        "available": false
+      },
+      "fake_delta": 0
+    }
+  }
+]

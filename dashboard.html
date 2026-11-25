@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>个人仪表盘</title>
+<style>
+:root{--bg:#14161a;--card:#1a1d22;--fg:#e8e6e1;--mut:#8b8f98;--line:#2a2f37;--acc:#c8a15a;--bad:#c96b5b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:16px/1.7 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:600px;margin:0 auto;padding:14px 14px 34px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+padding:10px 2px 18px}
+h1{font-size:20px;margin:0;font-weight:600}
+a{color:var(--acc);text-decoration:none;font-size:14px}
+.tag{font-size:13px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+padding:16px;margin-bottom:16px}
+.card h2{font-size:14px;margin:0 0 10px;color:var(--mut);font-weight:600;letter-spacing:.04em}
+.row{padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
+.row:last-child{border-bottom:0}
+.sub{font-size:13px;color:var(--mut);margin-top:3px}
+.empty{color:var(--mut);font-size:14px}
+#log{max-height:42vh;overflow:auto;margin-bottom:10px}
+.turn{margin:8px 0;font-size:15px}
+.you{color:var(--mut);font-size:13px}
+.ai{white-space:pre-wrap}
+form{display:flex;gap:8px}
+textarea{flex:1;background:#0f1114;color:var(--fg);border:1px solid var(--line);
+border-radius:10px;padding:12px;font:inherit;resize:none;height:50px}
+button{background:var(--acc);color:#161616;border:0;border-radius:10px;
+padding:0 20px;font:inherit;font-weight:600}
+.mini{background:#0f1114;color:var(--fg);border:1px solid var(--line);
+font-weight:400;font-size:12px;padding:6px 10px;border-radius:8px}
+.note{font-size:11px;color:var(--mut);margin-top:10px;line-height:1.6}
+</style></head><body>
+<div class="wrap">
+<header><h1>个人仪表盘</h1><a href="/">← 对话</a></header>
+
+<section class="card">
+  <h2>对话</h2>
+  <div id="log"><div class="empty">还没有对话。</div></div>
+  <form id="f"><textarea id="t" placeholder="说一句，它会记住"></textarea>
+  <button type="submit">发送</button></form>
+</section>
+
+<section class="card">
+  <h2>记忆</h2>
+  <div id="memory"><div class="empty">还没记住事实。</div></div>
+</section>
+
+<section class="card">
+  <h2>提醒</h2>
+  <div id="reminders"><div class="empty">没有生效的提醒。</div></div>
+</section>
+
+<section class="card">
+  <h2>自我</h2>
+  <div id="self"><div class="empty">还没有自我记录。</div></div>
+  <p class="note">心境是系统内部估计，不是诊断；它不声称有意识或感受。</p>
+</section>
+
+<section class="card">
+  <h2>自我模型</h2>
+  <div id="selfmodel"><div class="empty">还没加载。</div></div>
+  <p class="note">这是功能清单，不是体验声明；“没有”的项不美化。</p>
+</section>
+</div>
+<script>
+function el(tag, cls, text){var e=document.createElement(tag);if(cls)e.className=cls;
+if(text!==undefined&&text!==null)e.textContent=String(text);return e;}
+function api(path, body){var opt={method:body?'POST':'GET',headers:{'Content-Type':'application/json'}};
+if(body)opt.body=JSON.stringify(body);return fetch(path,opt).then(function(r){return r.json();});}
+function clear(node){while(node.firstChild)node.removeChild(node.firstChild);}
+function row(parent, text, sub){
+  var d=el('div','row'); d.appendChild(el('div',null,text));
+  if(sub) d.appendChild(el('div','sub',sub));
+  parent.appendChild(d);
+}
+function isMockReply(e){
+  var c=e.content||'';
+  return e.role!=='user' && (c.indexOf('[mock]')>=0 ||
+    c.indexOf('Phase1 · mock模型')>=0 || c.indexOf('(mock')>=0);
+}
+function renderLog(episodes){
+  var log=document.getElementById('log'); clear(log);
+  var kept=episodes.filter(function(e){return !isMockReply(e);});
+  var hidden=episodes.length-kept.length;
+  if(!kept.length){log.appendChild(el('div','empty','还没有真模型对话（mock 旧回复已隐藏）。'));return;}
+  kept.slice(-8).forEach(function(e){
+    var d=el('div','turn');
+    d.appendChild(el('div',e.role==='user'?'you':'ai',(e.role==='user'?'你：':'它：')+e.content));
+    log.appendChild(d);
+  });
+  if(hidden){log.appendChild(el('div','empty','已隐藏 '+hidden+' 条 mock 旧回复'));}
+  log.scrollTop=log.scrollHeight;
+}
+function factObject(f){
+  return String(f.object||'').replace(/^(记住|记下|记着|备注)[\s:：]*/,'').trim();
+}
+function factKey(f){return String(f.subject||'')+'|'+factObject(f);}
+function renderMemory(s){
+  var box=document.getElementById('memory'); clear(box);
+  var facts=s.facts||[], principles=s.principles||[];
+  if(!facts.length&&!principles.length){box.appendChild(el('div','empty','还没记住事实。'));return;}
+  var groups={}, order=[];
+  facts.forEach(function(f){
+    var k=factKey(f);
+    if(!groups[k]){
+      groups[k]={subject:f.subject||'', object:factObject(f),
+                 ids:[], preds:[], conf:0};
+      order.push(k);
+    }
+    var g=groups[k];
+    if(g.ids.indexOf('#'+f.id)<0)g.ids.push('#'+f.id);
+    if(g.preds.indexOf(f.predicate)<0)g.preds.push(f.predicate);
+    g.conf=Math.max(g.conf, Number(f.confidence)||0);
+    if(factObject(f).length<g.object.length)g.object=factObject(f);
+  });
+  order.slice(0,5).forEach(function(k){
+    var g=groups[k];
+    row(box, g.subject+' · '+g.object,
+        g.ids.join('/')+' · '+g.preds.join('/')+' · 置信 '+g.conf);
+  });
+  if(order.length>5){box.appendChild(el('div','empty','还有 '+(order.length-5)+' 条事实'));}
+  principles.slice(0,3).forEach(function(p){row(box, '原则：'+p.text, '#'+p.id);});
+}
+function renderReminders(triggers, outbox){
+  var box=document.getElementById('reminders'); clear(box);
+  if(!(triggers||[]).length){box.appendChild(el('div','empty','没有生效的提醒。'));}
+  (triggers||[]).forEach(function(t){
+    row(box, t.message_template, (t.type||'')+(t.spec?' · '+t.spec:'')+' · '+(t.active?'生效':'停用'));
+  });
+  var unread=(outbox||[]).filter(function(o){return !o.is_read;});
+  if(unread.length){row(box, '它主动找过你 '+unread.length+' 次', '去对话页看「主动」');}
+}
+function renderSelf(s){
+  var box=document.getElementById('self'); clear(box);
+  var af=s.affect||{}, sm=s['self']||{}, id=sm.identity||{};
+  row(box, '心境（估计）：'+(af.mood||'平静'), '强度 '+((af.intensity||0))+' · 线索 '+((af.cues||[]).join('、')||'无'));
+  row(box, id.role||'身份：还没建立', id.role?('版本 v'+sm.version+' · 改口 '+sm.revisions+' 次'):'先聊几句，它才会写下第一份记录');
+  row(box, '守着的原则：'+((s.principles||[]).length)+' 条', '');
+  var warns=(sm.warnings||[]).length;
+  row(box, warns?('自查提醒 '+warns+' 处'):'自查：未发现越界/近重复', warns?'它自己说不清，列给你判断':'');
+}
+function renderSelfModel(d){
+  var box=document.getElementById('selfmodel'); clear(box);
+  if(!d||!d.ok){box.appendChild(el('div','empty','自我模型未启用：'+((d&&d.reason)||'接口不可用')));return;}
+  (d.capabilities||[]).forEach(function(c){
+    row(box, c.name+'：'+c.status, c.evidence||'');
+  });
+  var cal=d.calibration||{};
+  if(cal.measured){
+    row(box, '校准：Brier '+cal.brier+' · n '+cal.n+' · 准确率 '+cal.accuracy,
+        'ts '+(cal.ts||'—'));
+  }else{
+    row(box, '校准：未测量', cal.reason||'跑一次校准再记录');
+  }
+}
+function refresh(){
+  Promise.all([api('/api/state'), api('/api/reminders'), api('/api/history'),
+               api('/api/self-report').catch(function(){return {};})]).then(function(r){
+    var s=r[0], rem=r[1]||{}, h=r[2]||{}, sm=r[3]||{};
+    renderLog(h.episodes||[]);
+    renderMemory(s);
+    renderReminders(rem.triggers||[], s.outbox||[]);
+    renderSelf(s);
+    renderSelfModel(sm);
+  });
+}
+function submit(text){
+  var log=document.getElementById('log');
+  var d=el('div','turn'); d.appendChild(el('div','you','你：'+text)); log.appendChild(d);
+  api('/api/chat',{text:text}).then(function(o){
+    var a=el('div','turn'); a.appendChild(el('div','ai','它：'+(o.response||''))); log.appendChild(a);
+    log.scrollTop=log.scrollHeight; refresh();
+  });
+}
+document.getElementById('f').addEventListener('submit',function(e){
+  e.preventDefault();var t=document.getElementById('t');var v=t.value.trim();
+  if(!v)return;t.value='';submit(v);});
+document.getElementById('t').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();
+  document.getElementById('f').dispatchEvent(new Event('submit'));}});
+refresh();
+</script></body></html>

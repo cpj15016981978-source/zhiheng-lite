@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 记忆图谱</title>
+<style>body{margin:0;background:#f5f2ec;color:#2a2722;font:13px/1.6 "Microsoft YaHei",system-ui,sans-serif}main{max-width:1100px;margin:0 auto;padding:20px}h1{font-size:18px;margin:0 0 4px}p{color:#80776a;font-size:12px;margin:0 0 12px}svg{width:100%;height:70vh;background:#fff;border:1px solid #d9d1c2;border-radius:10px}line{stroke:#c9b9a0;stroke-width:1.2}circle{fill:#8a5a2b}text{fill:#2a2722;font-size:11px}</style></head>
+<body><main><h1>记忆图谱</h1><p>本地事实关系图，只读；节点是主语/宾语，边是谓语。可拖动节点，点节点看详情。</p><svg id="g" viewBox="0 0 1000 650"></svg><div id="info" class="muted" style="margin-top:8px"></div></main>
+<script>
+fetch('/api/memory/graph').then(r=>r.json()).then(d=>{
+ const svg=document.querySelector('#g'), nodes=d.nodes||[], edges=d.edges||[];
+ const W=1000,H=650,cx=W/2,cy=H/2,R=Math.min(W,H)*0.38;
+ const pos={}; nodes.forEach((n,i)=>{const a=i/nodes.length*Math.PI*2;pos[n.id]={x:cx+Math.cos(a)*R,y:cy+Math.sin(a)*R};});
+ const NS='http://www.w3.org/2000/svg', edgesEl=[];
+ edges.forEach(e=>{const a=pos[e.source],b=pos[e.target];if(!a||!b)return;const l=document.createElementNS(NS,'line');l.setAttribute('x1',a.x);l.setAttribute('y1',a.y);l.setAttribute('x2',b.x);l.setAttribute('y2',b.y);svg.appendChild(l);edgesEl.push({e,l});});
+ let drag=null;
+ function redraw(){edgesEl.forEach(({e,l})=>{l.setAttribute('x1',pos[e.source].x);l.setAttribute('y1',pos[e.source].y);l.setAttribute('x2',pos[e.target].x);l.setAttribute('y2',pos[e.target].y);});}
+ nodes.forEach(n=>{const p=pos[n.id];const g=document.createElementNS(NS,'g');g.style.cursor='grab';const c=document.createElementNS(NS,'circle');c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',7);g.appendChild(c);const t=document.createElementNS(NS,'text');t.setAttribute('x',p.x+10);t.setAttribute('y',p.y+4);t.textContent=n.label.slice(0,18);g.appendChild(t);g.onpointerdown=(ev)=>{ev.preventDefault();drag={id:n.id,g};g.style.cursor='grabbing';};g.onclick=()=>{document.querySelector('#info').textContent=n.kind+'：'+n.label;};svg.appendChild(g);});
+ svg.onpointermove=(ev)=>{if(!drag)return;const r=svg.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width*W,y=(ev.clientY-r.top)/r.height*H;pos[drag.id]={x,y};const g=drag.g;g.children[0].setAttribute('cx',x);g.children[0].setAttribute('cy',y);g.children[1].setAttribute('x',x+10);g.children[1].setAttribute('y',y+4);redraw();};
+ svg.onpointerup=()=>{if(drag&&drag.g)drag.g.style.cursor='grab';drag=null;};
+ if(!nodes.length){const t=document.createElementNS(NS,'text');t.setAttribute('x',20);t.setAttribute('y',30);t.textContent='还没有事实节点';svg.appendChild(t);}
+}).catch(e=>{document.querySelector('#g').textContent='读取失败：'+e.message});
+</script></body></html>
