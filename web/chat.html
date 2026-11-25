@@ -1,0 +1,2880 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="知衡" />
+<meta name="theme-color" content="#f3eee4" />
+<script>document.documentElement.dataset.theme=(localStorage.getItem("luwu_theme")||"warm");  async function reminderPoll() {
+    try {
+      const r = await fetch('/api/reminders/pending'); const d = await r.json();
+      const items = d.items || [];
+      if (items.length) {
+        items.forEach(x => toast('提醒：' + x.message, 12000));
+        await fetch('/api/reminders/read', {method:'POST',headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ids: items.map(x => x.id)})});
+      }
+    } catch (e) {}
+  }
+  setInterval(reminderPoll, 15000); setTimeout(reminderPoll, 1500);
+</script>
+<link rel="manifest" href="/m1/manifest.json" />
+<link rel="apple-touch-icon" href="/m1/icon-512.png" />
+<title>知衡</title>
+<style>
+  :root {
+    --bg: #0b1118; --panel: #111c25; --panel2: #16232e; --line: #253744;
+    --text: #dbe8f2; --muted: #8ca2b4; --accent: #4fc3d0; --accent2: #00838f;
+    --user: #17313a; --danger: #d06666; --paper: #f4f6f5;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15.5px/1.8 "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    overflow: hidden;
+  }
+  button, textarea { font: inherit; }
+  .app { display: flex; height: 100%; }
+  .sidebar {
+    width: 268px; flex: 0 0 268px; background: #0e1720;
+    border-right: 1px solid var(--line); display: flex; flex-direction: column;
+  }
+  .brand { padding: 20px 18px 14px; display: flex; align-items: center; gap: 10px; }
+  .mark {
+    width: 34px; height: 34px; border-radius: 11px; background: var(--accent2);
+    display: grid; place-items: center; color: var(--paper); font-weight: 800;
+    letter-spacing: -1px;
+  }
+  .brand b { font-size: 17px; letter-spacing: 1px; }
+  .brand small { display: block; color: var(--muted); font-size: 11px; letter-spacing: 2px; }
+  .new {
+    margin: 6px 14px 12px; padding: 11px 12px; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--panel); color: var(--text); cursor: pointer;
+    text-align: left;
+  }
+  .new:hover { border-color: var(--accent2); color: var(--accent); }
+  .sessions { overflow: auto; padding: 0 10px 10px; flex: 1; }
+  .side-search { padding: 0 12px 8px; }
+  .side-search input {
+    width: 100%; box-sizing: border-box; background: #0d1820; color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 12px;
+    outline: none;
+  }
+  .side-search input:focus { border-color: var(--accent2); }
+  .session {
+    padding: 10px 10px; margin: 3px 0; border-radius: 9px; cursor: pointer;
+    color: var(--muted); font-size: 13px; display: flex; gap: 8px;
+    justify-content: space-between; align-items: center;
+  }
+  .session:hover, .session.active { background: var(--panel); color: var(--text); }
+  .session.pinned { color: var(--text); }
+  .session.pinned span:first-child { color: var(--accent); }
+  .session span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .session button {
+    border: 0; background: transparent; color: var(--muted); cursor: pointer;
+    opacity: 0; font-size: 15px;
+  }
+  .session:hover button { opacity: 1; }
+  .session .acts { display: flex; gap: 2px; flex: 0 0 auto; }
+  .session .acts button { padding: 0 3px; }
+  .side-foot { padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .top {
+    position: relative; z-index: 30;
+    height: 58px; display: flex; align-items: center; gap: 12px;
+    padding: 0 22px; border-bottom: 1px solid var(--line); background: rgba(11,17,24,.86);
+    backdrop-filter: blur(10px);
+  }
+  .top .title { font-weight: 600; }
+  .pill {
+    font-size: 11px; color: var(--accent); border: 1px solid #22505a;
+    background: #0e2228; border-radius: 999px; padding: 2px 9px;
+  }
+  .top .spacer { flex: 1; }
+  .top .meta { color: var(--muted); font-size: 11px; }
+  .more-wrap { position: relative; }
+  .more-menu {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px);
+    min-width: 132px; padding: 5px; z-index: 100;
+    background: #0d1820; border: 1px solid var(--line); border-radius: 9px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.45);
+  }
+  .more-menu.show { display: block; }
+  .more-menu button {
+    display: block; width: 100%; text-align: left; border: 0;
+    background: transparent; color: var(--text); padding: 7px 9px;
+    border-radius: 6px; font-size: 12px; cursor: pointer;
+  }
+  .more-menu button:hover { background: #142733; color: var(--accent); }
+  .row .model-select { flex: 0 1 170px; min-width: 110px; }
+  .model-select {
+    background: #0e2228; color: var(--accent); border: 1px solid #22505a;
+    border-radius: 999px; padding: 4px 8px; font-size: 11px; max-width: 210px;
+    outline: none; cursor: pointer;
+  }
+  .reasoning {
+    margin: 8px 0 10px; border: 1px solid #263a47; border-radius: 9px;
+    background: #0b1720; color: var(--muted); font-size: 12px; overflow: hidden;
+  }
+  .reasoning summary { cursor: pointer; padding: 7px 10px; color: #9ec7d2; }
+  .reasoning .r-body { padding: 0 10px 9px; white-space: pre-wrap; line-height: 1.6; }
+  .messages { flex: 1; overflow: auto; scroll-behavior: smooth; }
+  .brief-card { max-width: 820px; margin: 18px auto 0; padding: 12px 14px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--panel); font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
+  .brief-card b { color: var(--accent); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 26px 22px 120px; }
+  .msg { display: flex; gap: 12px; margin: 20px 0; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 30px; height: 30px; flex: 0 0 30px; border-radius: 9px;
+    display: grid; place-items: center; font-size: 12px; font-weight: 700;
+    background: var(--panel2); color: var(--accent);
+  }
+  .msg.user .avatar { background: #24414a; color: var(--paper); }
+  .body { min-width: 0; flex: 1; position: relative; display: flex; flex-direction: column; align-items: flex-start; }
+  .msg.user .body { align-items: flex-end; }
+  .who { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .msg.user .who { text-align: right; }
+  .bubble {
+    max-width: min(78%, 720px);
+    border: 1px solid #203a46;
+    background: #0e1e27;
+    border-radius: 14px 14px 14px 4px;
+    padding: 10px 14px;
+    line-height: 1.65;
+  }
+  .msg.user .bubble {
+    border-color: #2d6672;
+    background: #173c46;
+    color: #f4fbfc;
+    border-radius: 14px 14px 4px 14px;
+  }
+  .msg.ai .bubble { max-width: min(84%, 780px); }
+  .msg.user .content { color: #f4fbfc; }
+  .msg.user .content a { color: #d8f4f7; }
+  .toolbadge {
+    display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px;
+    border: 1px solid #2b4653; color: var(--accent); font-size: 10px;
+  }
+  .msgcopy {
+    position: absolute; right: 0; top: -4px; opacity: 0;
+    border: 1px solid #2b4250; background: #10202a; color: var(--muted);
+    border-radius: 6px; padding: 2px 7px; font-size: 11px; cursor: pointer;
+  }
+  .msgquote {
+    position: absolute; right: 44px; top: -4px; opacity: 0;
+    border: 1px solid #2b4250; background: #10202a; color: var(--muted);
+    border-radius: 6px; padding: 2px 7px; font-size: 11px; cursor: pointer;
+  }
+  .msg:hover .msgcopy, .msg:hover .msgquote { opacity: 1; }
+  .msgcopy:hover, .msgquote:hover { color: var(--accent); border-color: var(--accent2); }
+  .quotebar {
+    max-width: 860px; margin: 0 auto 6px; display: flex; gap: 8px; align-items: center;
+    border-left: 2px solid var(--accent2); background: #0d1820; color: var(--muted);
+    font-size: 12px; padding: 6px 9px; border-radius: 0 8px 8px 0;
+  }
+  .quotebar[hidden] { display: none; }
+  .quotebar span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quotebar button { border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+  .content { overflow-wrap: anywhere; }
+  .content p { margin: 8px 0; }
+  .content h1, .content h2, .content h3 { margin: 16px 0 8px; line-height: 1.3; }
+  .content ul, .content ol { margin: 8px 0; padding-left: 22px; }
+  .content li { margin: 3px 0; }
+  .content code {
+    background: #1b2a35; border: 1px solid #263a47; padding: 1px 5px;
+    border-radius: 5px; font-family: Consolas, Menlo, monospace; font-size: 13px;
+  }
+  .content pre {
+    position: relative; background: #071018; border: 1px solid #223440;
+    border-radius: 10px; padding: 14px; overflow: auto; margin: 12px 0;
+  }
+  .content pre code { background: none; border: 0; padding: 0; font-size: 13px; }
+  .copy {
+    position: absolute; right: 8px; top: 8px; border: 1px solid #2b4250;
+    background: #10202a; color: var(--muted); border-radius: 6px;
+    padding: 3px 7px; font-size: 11px; cursor: pointer;
+  }
+  .content a { color: var(--accent); }
+  .content blockquote {
+    margin: 10px 0; padding: 6px 12px; border-left: 3px solid var(--accent2);
+    color: #b7c9d6; background: #0e1a22;
+  }
+  .typing::after { content: "▍"; color: var(--accent); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .composer {
+    position: relative; padding: 0 22px 18px; background: linear-gradient(transparent, var(--bg) 26%);
+  }
+  .box {
+    max-width: 860px; margin: 0 auto; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 16px; padding: 10px 10px 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
+  textarea {
+    width: 100%; min-height: 44px; max-height: 160px; resize: none; border: 0;
+    outline: 0; background: transparent; color: var(--text); padding: 8px 8px 4px;
+    line-height: 1.6;
+  }
+  .row { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+  .hint { color: var(--muted); font-size: 11px; flex: 1; }
+  .send, .stop {
+    border: 0; border-radius: 9px; padding: 8px 14px; cursor: pointer; font-weight: 600;
+  }
+  .send { background: var(--accent2); color: #fff; }
+  .send:disabled { opacity: .45; cursor: not-allowed; }
+  .ghost {
+    border: 1px solid var(--line); background: transparent; color: var(--muted);
+    border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 12px;
+  }
+  .ghost:hover { border-color: var(--accent2); color: var(--accent); }
+  .ghost.rec { border-color: #b3261e; color: #ffb2b2; background: #3a2025; }
+  .ghost.search-on { border-color: #00838f; color: var(--accent); background: #0e2228; }
+  .settings-mask {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    z-index: 40; place-items: center; padding: 18px;
+  }
+  .settings-mask.show { display: grid; }
+  #moreMenu button[hidden] { display: none !important; }
+  .advanced-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px; }
+  .advanced-grid button { font-size:12px; padding:6px 4px; }
+  .model-field { margin-top:8px; } .model-field label { display:block; color:var(--muted); font-size:11px; margin-bottom:3px; }
+  .model-field input, .model-field select { width:100%; box-sizing:border-box; }
+  @media (max-width: 560px) { .advanced-grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  .settings-card {
+    width: min(520px, 100%); background: #0d1820; border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    max-height: calc(100vh - 36px); overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .settings-head { display: flex; justify-content: space-between; align-items: center; margin: -16px -16px 12px; padding: 16px; background: var(--panel); position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--line); }
+  .settings-head b { color: var(--text); }
+  .settings-head button { border: 0; background: transparent; color: var(--muted); font-size: 20px; cursor: pointer; }
+  .settings-body { display: grid; gap: 8px; font-size: 13px; }
+  .setting-row { display: flex; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .setting-row:last-child { border-bottom: 0; }
+  .setting-row span:first-child { color: var(--muted); }
+  .setting-ok { color: #5bd6a2; }
+  .setting-no { color: #ff9b9b; }
+  .settings-foot { color: var(--muted); font-size: 11px; margin-top: 12px; line-height: 1.5; }
+  .code-card { width: min(900px, 100%); }
+  .code-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .code-row input {
+    flex: 1; min-width: 0; background: #0b141b; color: var(--text);
+    border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; font-size: 12px;
+  }
+  .code-area {
+    width: 100%; box-sizing: border-box; height: 320px; resize: vertical;
+    background: #0b141b; color: #d7e6ee; border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px; font: 12px/1.5 Consolas, monospace;
+  }
+  .code-out {
+    max-height: 180px; overflow: auto; white-space: pre-wrap; font: 11px/1.5 Consolas, monospace;
+    color: var(--muted); background: #091117; border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px; margin-top: 8px;
+  }
+  .filechips { max-width: 860px; margin: 0 auto 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .main.dragover { outline:2px dashed var(--accent); outline-offset:-8px; }
+  .filechip {
+    display: inline-flex; align-items: center; gap: 6px; max-width: 320px;
+    background: #10202a; border: 1px solid #2b4653; color: var(--muted);
+    border-radius: 8px; padding: 4px 8px; font-size: 11px;
+  }
+  .filechip b { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filechip button { border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+  .stop { background: #3a2025; color: #ffb2b2; border: 1px solid #623039; display: none; }
+  .empty { max-width: 720px; margin: 12vh auto 0; padding: 0 22px; text-align: center; }
+  .empty h1 { font-size: 28px; letter-spacing: 1px; margin: 0 0 8px; }
+  .empty p { color: var(--muted); margin: 0 0 22px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 999px; padding: 8px 14px; cursor: pointer; font-size: 13px;
+  }
+  .chip:hover { border-color: var(--accent2); color: var(--accent); }
+  .toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    background: #1a2a34; border: 1px solid #2b4653; color: var(--text);
+    padding: 8px 14px; border-radius: 9px; font-size: 12px; opacity: 0;
+    pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  @media (max-width: 760px) {
+    .app { flex-direction: column; }
+    .sidebar {
+      display: flex; width: 100%; height: auto; max-height: 42vh;
+      border-right: 0; border-bottom: 1px solid var(--line);
+    }
+    .sessions { max-height: 22vh; }
+    .side-foot { display: none; }
+    .wrap { padding: 18px 14px 120px; }
+    .composer { padding: 0 12px 12px; }
+    .top { padding: 8px 14px; height: auto; flex-wrap: wrap; gap: 8px; }
+    .top .meta { display: none; }
+    .model-select { max-width: 180px; }
+    .session .acts button, .msgcopy, .msgquote { opacity: 1; }
+    .filechips { padding: 0 2px; }
+  }
+
+  /* 默认暖白：降低对比、放大行距，长时间看不刺眼 */
+  html[data-theme="warm"] {
+    --bg:#f3eee4; --panel:#fffaf2; --panel2:#ece2d3; --line:#d8cbb9;
+    --text:#2f2a25; --muted:#776d60; --accent:#8a5a2b; --accent2:#a9713e;
+    --user:#ead9c2; --danger:#a35445; --paper:#fffaf2;
+  }
+  html[data-theme="warm"] body { background: var(--bg); color: var(--text); }
+  html[data-theme="warm"] .sidebar { background:#ece4d7; }
+  html[data-theme="warm"] .top { background:rgba(243,238,228,.92); }
+  html[data-theme="warm"] .side-search input,
+  html[data-theme="warm"] .more-menu,
+  html[data-theme="warm"] .settings-card,
+  html[data-theme="warm"] .code-out,
+  html[data-theme="warm"] .code-area,
+  html[data-theme="warm"] .code-row input,
+  html[data-theme="warm"] .toast { background:#fffaf2; color:var(--text); }
+  html[data-theme="warm"] .more-menu button:hover { background:#f1e6d4; }
+  html[data-theme="warm"] .pill { background:#f2e3cf; border-color:#d6b88f; color:#7a542c; }
+  html[data-theme="warm"] .model-select { background:#f2e3cf; border-color:#d6b88f; color:#7a542c; }
+  html[data-theme="warm"] .reasoning { background:#f8f1e6; border-color:#e0d2bf; }
+  html[data-theme="warm"] .reasoning summary { color:#7a542c; }
+  html[data-theme="warm"] .bubble { background:#fffaf2; border-color:#dfd2c0; }
+  html[data-theme="warm"] .msg.user .bubble { background:#ead9c2; border-color:#d6b88f; color:#2f2a25; }
+  html[data-theme="warm"] .msg.user .content,
+  html[data-theme="warm"] .msg.user .content a { color:#2f2a25; }
+  html[data-theme="warm"] .msgcopy,
+  html[data-theme="warm"] .msgquote { background:#f1e6d4; border-color:#d8cbb9; color:#776d60; }
+  html[data-theme="warm"] .quotebar { background:#f8f1e6; }
+  html[data-theme="warm"] .content code { background:#f1e6d4; border-color:#d8cbb9; color:#3a3026; }
+  html[data-theme="warm"] .content pre { background:#2f3338; border-color:#3f454b; color:#f0e8dc; }
+  html[data-theme="warm"] .content pre code { color:#f0e8dc; }
+  html[data-theme="warm"] .content blockquote { background:#f8f1e6; color:#5f5548; }
+  html[data-theme="warm"] .box { background:#fffaf2; box-shadow:0 10px 30px rgba(80,60,30,.10); }
+  html[data-theme="warm"] .composer { background:linear-gradient(transparent, var(--bg) 26%); }
+  html[data-theme="warm"] .filechip { background:#f8f1e6; border-color:#d8cbb9; }
+  html[data-theme="warm"] .bubble, html[data-theme="warm"] .content { font-size:15.5px; line-height:1.85; }
+  html[data-theme="warm"] .who { font-size:12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">时</div>
+      <div><b>知衡</b><small>PERSONAL AI</small></div>
+    </div>
+    <button class="new" id="newChat">＋ 新对话</button>
+    <div class="side-search"><input id="sessionSearch" placeholder="搜索对话…" /></div>
+    <div class="sessions" id="sessions"></div>
+    <div class="side-foot">知衡记得你，时中回答你。</div>
+  </aside>
+
+  <main class="main">
+    <header class="top">
+      <div class="title" id="chatTitle">新对话</div>
+      <span class="pill" id="modePill">时中 · 标准</span>
+      <span class="spacer"></span>
+      <div class="more-wrap">
+        <a class="ghost" href="/memory" title="记忆健康" style="text-decoration:none">记忆</a>
+        <button class="ghost" id="moreBtn" title="设置与更多">⋯</button>
+        <div class="more-menu" id="moreMenu">
+          <button id="themeBtn">主题：暖白</button>
+          <button id="regen">重新生成</button>
+          <button id="exportBtn">导出</button>
+          <button id="settingsBtn">设置</button>
+        </div>
+      </div>
+      <span class="meta" id="modelMeta">连接中…</span>
+    </header>
+
+    <section class="messages" id="messages">
+      <div id="briefCard" class="brief-card" hidden></div>
+      <div class="empty" id="empty">
+        <h1>在的，慢慢说。</h1>
+        <p>可以聊事情、理思路、写东西，也可以让我查记忆和任务。</p>
+        <div class="chips">
+          <button class="chip" data-q="帮我理一下今天最该做的一件事">理一下今天</button>
+          <button class="chip" data-q="把这段话改成更清楚的表达：">改一段话</button>
+          <button class="chip" data-q="查一下记忆里关于时中主线的进展">查记忆</button>
+          <button class="chip" data-q="写一个能跑的最小方案">写个方案</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="composer">
+      <div class="quotebar" id="quoteBar" hidden>
+        <span id="quoteText"></span><button id="quoteCancel" title="取消引用">×</button>
+      </div>
+      <div class="filechips" id="fileChips"></div>
+      <input type="file" id="fileInput" multiple hidden
+             accept=".txt,.md,.py,.json,.csv,.log,.yaml,.yml,.html,.js,.ts,.sql,.pdf,.docx,.pptx,.xlsx,.xlsm,.png,.jpg,.jpeg,.webp,.bmp" />
+      <div class="box">
+        <textarea id="input" rows="1" placeholder="给时中发消息…（Enter 发送，Shift+Enter 换行）"></textarea>
+        <div class="row">
+          <button class="ghost" id="attachBtn">＋附件</button>
+          <button class="ghost" id="voiceBtn">按住说话</button>
+          <button class="ghost" id="streamVoiceBtn" title="边说边识别">连续听</button>
+          <button class="ghost" id="meetingBtn" title="会议转写，结束生成纪要">会议</button>
+          <button class="ghost" id="ttsBtn" title="让时中把回答念出来">朗读关</button>
+          <button class="ghost" id="streamBtn" title="边生成边念">流式关</button>
+          <button class="ghost" id="searchBtn" title="只控制本次搜索是否联网；总闸在设置">本次联网</button>
+          <span class="hint">AI 也会犯错，重要信息请核实</span>
+          <select class="model-select" id="modelSelect" title="模型选择；不改变联网总闸">
+            <option value="low">免费本地</option>
+            <option value="balanced">本地增强</option>
+            <option value="hybrid">混合 · 本地优先/API兜底</option>
+            <option value="cloud">API 模式</option>
+          </select>
+          <button class="send" id="send">发送</button>
+          <button class="stop" id="stop">停止</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="settings-mask" id="roiMask">
+  <div class="settings-card code-card" style="width:min(780px,94vw)">
+    <div class="settings-head"><b>ROI 看板 · 作业投入/节省</b><button id="roiClose">×</button></div>
+    <div id="roiSummary" class="code-out" style="max-height:120px">加载中…</div>
+    <div id="roiList" class="code-out" style="max-height:300px;margin-top:8px"></div>
+    <div class="code-row" style="margin-top:8px">
+      <button class="ghost" id="roiBackfill">补挂旧作业</button>
+      <span id="roiMsg" class="muted"></span>
+    </div>
+  </div>
+</div>
+<div class="settings-mask" id="modelsMask">
+  <div class="settings-card code-card" style="width:min(680px,92vw)">
+    <div class="settings-head"><b>本地模型包 · 断网路由</b><button id="modelsClose">×</button></div>
+    <div id="modelsList" class="code-out" style="max-height:180px">加载中…</div>
+    <div class="muted" style="font-size:11px;margin-top:4px">本地 qwen3-4b 时自动分级：0.6B 路由 / 1.5B 快答 / 4B 复杂</div>
+    <div class="code-row" style="margin-top:8px">
+      <select id="globalModelSelect" style="flex:1"></select>
+      <button class="ghost" id="globalModelApply">设为全局</button>
+      <span id="globalModelMsg" class="muted"></span>
+    </div>
+    <div class="code-row" style="margin-top:8px">
+      <input id="modelRouteText" placeholder="输入一句，测 0.6B 路由" />
+      <button class="ghost" id="modelRouteBtn">路由</button>
+    </div>
+    <div id="modelRouteOut" class="code-out" style="margin-top:8px"></div>
+  </div>
+</div>
+<div class="settings-mask" id="wsMask">
+  <div class="settings-card code-card" style="width:min(760px,94vw)">
+    <div class="settings-head"><b>事情 · 一个任务一个空间</b><button id="wsClose">×</button></div>
+    <div class="code-row" style="margin-bottom:8px">
+      <input id="wsTitle" placeholder="新事情标题" />
+      <button class="ghost" id="wsCreate">新建</button>
+    </div>
+    <div id="wsList" class="code-out" style="max-height:180px">加载中…</div>
+    <div id="wsDetail" class="code-out" style="max-height:280px;margin-top:8px">选一件事</div>
+    <div class="code-row" style="margin-top:8px">
+      <input id="wsNote" placeholder="加一条记录/证据" />
+      <button class="ghost" id="wsAdd">添加</button>
+    </div>
+    <div class="code-row" style="margin-top:6px">
+      <input id="wsJobTitle" placeholder="给这件事挂一个作业" />
+      <input id="wsJobEstimate" type="number" min="0" placeholder="人工估时(分钟)" style="width:120px" />
+      <button class="ghost" id="wsJobCreate">挂作业</button>
+    </div>
+  </div>
+</div>
+<div class="settings-mask" id="agentsMask">
+  <div class="settings-card code-card" style="width:min(680px,92vw)">
+    <div class="settings-head"><b>Agent Registry · 身份 / 负责人 / 权限</b><button id="agentsClose">×</button></div>
+    <div id="agentsList" class="code-out" style="max-height:260px">加载中…</div>
+    <div class="code-row" style="margin-top:8px">
+      <input id="agentName" placeholder="代理名" />
+      <input id="agentOwner" placeholder="负责人" value="Boss" />
+      <input id="agentScopes" placeholder="scope，逗号分隔" value="job:create,read" />
+      <button class="ghost" id="agentCreate">注册</button>
+    </div>
+    <div class="muted" style="font-size:11px;margin-top:6px">停用后不能新建/领取作业；内置代理不可停用。</div>
+  </div>
+</div>
+<div class="settings-mask" id="jobsMask">
+  <div class="settings-card code-card" style="width:min(680px,92vw)">
+    <div class="settings-head"><b>后台作业 · 挂起 / 恢复 / 事件</b><button id="jobsClose">×</button></div>
+    <div id="jobsWorker" class="muted" style="font-size:11px;margin-bottom:6px">worker：读取中…</div>
+    <div id="jobsList" class="code-out" style="max-height:260px">加载中…</div>
+    <div class="muted" style="font-size:11px;margin:6px 0 2px">事件流</div>
+    <div id="jobsEvents" class="code-out" style="max-height:180px;font-size:11px">点一条作业看事件。</div>
+    <div class="code-row" style="margin-top:8px">
+      <button class="ghost" id="jobsRefresh">刷新</button>
+      <button class="ghost" id="jobsAdd">新建作业</button>
+      <button class="ghost" id="jobsDry">跑一次 dry-run</button>
+      <button class="ghost" id="jobsRun">执行已批准</button>
+    </div>
+    <div class="muted" style="font-size:11px;margin-top:6px">作业只落本地库；挂起不占进程，恢复要你回答。</div>
+  </div>
+</div>
+<div class="settings-mask" id="personaMask">
+  <div class="settings-card code-card" style="width:min(620px,92vw)">
+    <div class="settings-head"><b>人设蒸馏 · 导入聊天记录</b><button id="personaClose">×</button></div>
+    <div class="code-row" style="gap:6px;flex-wrap:wrap">
+      <input id="personaName" placeholder="名字" style="flex:1;min-width:120px" />
+      <label style="font-size:12px"><input type="checkbox" id="personaLLM" checked /> 用 LLM 蒸馏</label>
+    </div>
+    <textarea id="personaText" placeholder="粘贴聊天记录，每行一句…" style="width:100%;height:150px;margin-top:6px;background:#0f1114;color:#dbe8f2;border:1px solid #253744;border-radius:8px;padding:8px"></textarea>
+    <div class="code-row" style="margin-top:6px">
+      <button id="personaImport">导入并蒸馏</button>
+      <button class="ghost" id="personaRefresh">刷新</button>
+      <button class="ghost" id="gradBtn">毕业/告别</button>
+    </div>
+    <div id="relText" class="muted" style="font-size:12px;margin-top:6px"></div>
+    <div id="personaMsg" class="muted" style="font-size:12px;margin-top:6px"></div>
+    <div id="personaList" class="code-out" style="max-height:180px;margin-top:8px"></div>
+    <div class="settings-head" style="margin-top:8px"><b>记忆候选</b></div>
+    <div id="candList" class="code-out" style="max-height:160px"></div>
+  </div>
+</div>
+<div class="settings-mask" id="jarMask">
+  <div class="settings-card code-card">
+    <div class="settings-head"><b>贾维斯 · 当前上下文</b><button id="jarClose">×</button></div>
+    <div class="code-out" id="jarBody" style="max-height:300px">加载中…</div>
+    <div class="code-row" style="margin-top:8px">
+      <button class="ghost" id="jarRefresh">刷新</button>
+      <button class="ghost" id="jarPush">打开推进</button>
+    </div>
+  </div>
+</div>
+<div class="settings-mask" id="proMask">
+  <div class="settings-card code-card">
+    <div class="settings-head"><b>主动推进 · 批准才动</b><button id="proClose">×</button></div>
+    <div id="proList" class="code-out" style="max-height:220px">加载中…</div>
+    <div class="muted" style="font-size:11px;margin:6px 0 2px">审批台账</div>
+    <div id="proLedger" class="code-out" style="max-height:120px;font-size:11px">暂无记录</div>
+    <div class="code-out" id="proOut">批准前不会执行；浏览器动作会打开页面。</div>
+  </div>
+</div>
+<div class="settings-mask" id="contMask">
+  <div class="settings-card code-card">
+    <div class="settings-head"><b>续线 · 上次停在哪</b><button id="contClose">×</button></div>
+    <div class="muted" id="contDueLabel" style="font-size:11px;margin-bottom:6px"></div>
+    <div id="contList" class="code-out" style="max-height:180px">加载中…</div>
+    <div class="code-row" style="margin-top:8px">
+      <input id="contTitle" placeholder="这条线是什么" />
+      <input id="contNext" placeholder="下一步做什么" />
+    </div>
+    <div class="code-row">
+      <input id="contLast" placeholder="上次停在哪（可空）" />
+      <input id="contEvidence" placeholder="证据/链接（可空）" />
+      <input id="contDue" placeholder="到期时间 ISO（可空）" />
+      <button class="ghost" id="contSave">记住这条线</button>
+    </div>
+    <div class="code-out" id="contOut">换会话也能从这里继续。</div>
+  </div>
+</div>
+<div class="settings-mask" id="capMask">
+  <div class="settings-card code-card">
+    <div class="settings-head"><b>能力 · Skills / MCP</b><button id="capClose">×</button></div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">核心能力：对话与推理由主循环提供，不在下面的 Skills/MCP 列表里。</div>
+    <div class="setting-row"><span>技能</span><button class="ghost" id="skillRefresh">刷新</button></div>
+    <div id="skillList" class="code-out" style="max-height:120px">加载中…</div>
+    <div class="setting-row"><span>MCP 服务</span><button class="ghost" id="mcpRefresh">刷新</button></div>
+    <div id="mcpList" class="code-out" style="max-height:100px">加载中…</div>
+    <div class="code-row" style="margin-top:8px">
+      <select id="mcpTool" class="model-select" style="flex:1;max-width:none"></select>
+      <input id="mcpArgs" value="{}" placeholder='参数 JSON，例如 {"text":"你好"}' />
+      <button class="ghost" id="mcpCall">调用</button>
+    </div>
+    <div class="code-row" style="margin-top:8px">
+      <input id="browserUrl" placeholder="https://..." />
+      <input id="browserActions" value="[]" placeholder='动作 JSON，例如 [{"type":"click","selector":"text=登录"}]' />
+      <button class="ghost" id="browserRun">浏览器任务</button>
+      <button class="ghost" id="browserLogin">登录窗口</button>
+    </div>
+    <div class="code-row">
+      <button class="ghost" id="desktopList">列桌面窗口</button>
+      <select id="desktopWin" class="model-select" style="flex:1;max-width:none"></select>
+      <input id="desktopText" placeholder="要输入的文字（可空）" />
+      <button class="ghost" id="desktopFocus">聚焦</button>
+      <button class="ghost" id="desktopType">输入</button>
+    </div>
+    <div class="code-out" id="capOut">MCP 调用必须人工确认。</div>
+  </div>
+</div>
+<div class="settings-mask" id="writeMask">
+  <div class="settings-card code-card">
+    <div class="settings-head"><b>写作工作台</b><button id="writeClose">×</button></div>
+    <div class="code-row">
+      <select class="model-select" id="writeTask">
+        <option value="draft">写初稿</option>
+        <option value="outline">列大纲</option>
+        <option value="polish">润色</option>
+        <option value="rewrite">改写</option>
+        <option value="shorten">缩短</option>
+        <option value="expand">扩写</option>
+      </select>
+      <input id="writeTopic" placeholder="主题，例如：给客户解释涨价" />
+      <input id="writeAudience" placeholder="读者（可空）" />
+    </div>
+    <div class="code-row">
+      <input id="writeTone" placeholder="语气（可空），例如：克制、专业" />
+      <input id="writeLength" placeholder="长度（可空），例如：800 字" />
+    </div>
+    <div class="code-row">
+      <input id="writeStyleName" placeholder="风格名（长期保存，可空）" />
+      <input id="writeStyleNotes" placeholder="风格偏好（可空）" />
+      <button class="ghost" id="writeStyleSave">保存风格</button>
+      <button class="ghost" id="writeStyleLearn">从结果学习</button>
+      <button class="ghost" id="writeStyleClear">清空</button>
+    </div>
+    <div class="muted" id="writeStyleState" style="font-size:11px;margin-bottom:6px"></div>
+    <textarea class="code-area" id="writeMaterial" placeholder="素材（可空）：事实、要点、原文"></textarea>
+    <div class="code-row" style="margin-top:8px">
+      <button class="ghost" id="writeGo">生成</button>
+      <button class="ghost" id="writeCopy">复制结果</button>
+      <span class="muted" id="writeState" style="font-size:11px"></span>
+    </div>
+    <div class="code-out" id="writeOut" style="min-height:120px">生成结果会出现在这里。</div>
+  </div>
+</div>
+<div class="settings-mask" id="codeMask">
+  <div class="settings-card code-card">
+    <div class="settings-head"><b>工程工作台</b><button id="codeClose">×</button></div>
+    <div class="code-row">
+      <input id="codeRoot" value="D:\DSH\chuixue_desktop" placeholder="项目根" />
+      <input id="codePath" placeholder="相对路径，如 start_all.py" />
+      <button class="ghost" id="codeLoad">读取</button>
+    </div>
+    <textarea class="code-area" id="codeText" placeholder="读取后在这里修改；保存前会确认。"></textarea>
+    <div class="code-row" style="margin-top:8px">
+      <input id="codeCmd" value="python -m unittest discover -s tests -p test_*.py" placeholder="测试命令" />
+      <button class="ghost" id="codeSave">保存并跑测试</button>
+      <button class="ghost" id="codeTest">只跑测试</button>
+      <span class="muted" id="codeSha" style="font-size:11px"></span>
+    </div>
+    <div class="code-out" id="codeOut">读文件 → 改 → 保存（确认）→ 自动跑 unittest。</div>
+    <div class="settings-head" style="margin-top:12px"><b>批量修改</b></div>
+    <div class="muted" style="font-size:11px;margin:4px 0">JSON 数组：[{"path":"a.py","content":"..."}]；写盘前会确认。</div>
+    <textarea class="code-area" id="codeBatchText" style="min-height:100px" placeholder='[{"path":"a.py","content":"..."}]'></textarea>
+    <div class="code-row" style="margin-top:6px">
+      <button class="ghost" id="codeBatchApply">批量应用</button>
+      <button class="ghost" id="codeBatchRollback">回滚当前文件</button>
+      <span class="muted" id="codeBatchMsg"></span>
+    </div>
+  </div>
+</div>
+<div class="settings-mask" id="adminMask">
+  <div class="settings-card" style="width:min(560px,94vw)">
+    <div class="settings-head"><b>添加自定义模型</b><button id="adminClose">×</button></div>
+    <div class="model-field"><label>配置名称</label><input id="modelConfigName" placeholder="例如：我的 DeepSeek" /></div>
+    <div class="model-field"><label>模型厂商</label><select id="modelProvider">
+      <option value="deepseek">DeepSeek</option>
+      <option value="openai">OpenAI</option>
+      <option value="moonshot">Kimi</option>
+      <option value="zhipu">智谱 AI</option>
+      <option value="minimax">MiniMax</option>
+      <option value="hunyuan">腾讯混元</option>
+      <option value="qwen">千问（Qwen）</option>
+      <option value="mimo">小米 MiMo</option>
+      <option value="custom">自定义</option>
+    </select></div>
+    <div class="model-field"><label>API Base 地址</label><input id="modelBase" placeholder="https://api.deepseek.com/v1，不要带 /chat/completions" /></div>
+    <div class="model-field"><label>API Key</label><input id="modelKey" type="password" placeholder="输入你的 API Key" /></div>
+    <div class="model-field"><label>模型名称</label><input id="modelName" placeholder="例如 deepseek-chat / glm-4-plus" /></div>
+    <div class="model-field"><label>多模态选择</label><select id="modelMulti"><option value="0">不使用多模态</option><option value="1">使用多模态</option></select></div>
+    <div id="modelTestMsg" class="muted" style="margin:8px 0">测试成功会自动保存并选中；失败不会保存。</div>
+    <div class="code-row" style="justify-content:flex-end"><button class="ghost" id="modelTest">连接测试</button><button class="send" id="modelSave">保存</button></div>
+    <details style="margin-top:10px"><summary class="muted" style="font-size:12px;cursor:pointer">高级配置</summary>
+      <div class="code-row" style="margin-top:8px"><input id="modelPullName" placeholder="拉取本地模型，例如 qwen2.5:3b" style="flex:1"/><button class="ghost" id="modelPullBtn">拉取</button></div>
+      <div id="installedModels" class="code-out" style="max-height:90px;margin-top:8px"></div>
+      <div id="customModelList" class="code-out" style="max-height:90px;margin-top:8px"></div>
+    </details>
+  </div>
+</div>
+<div class="settings-mask" id="onboardMask">
+  <div class="settings-card" style="width:min(560px,92vw)">
+    <div class="settings-head"><b>欢迎使用知衡</b></div>
+    <p class="muted">本地模型是核心；没有 API 也能办公。联网和 API 都是可选扩展。</p>
+    <div class="setting-row"><span>数据目录</span><b id="onboardDir">—</b></div>
+    <div class="setting-row"><span>默认模型</span><b>qwen2.5:1.5b（可换）</b></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="ghost" id="onboardLater">稍后</button>
+      <button class="send" id="onboardStart">开始使用</button>
+    </div>
+  </div>
+</div>
+<div class="settings-mask" id="settingsMask">
+  <div class="settings-card">
+    <div class="settings-head"><b>能力与设置</b><button id="settingsClose">×</button></div>
+    <div id="settingsBody" class="settings-body">加载中…</div>
+    <div class="setting-row"><span>API Key</span><button class="ghost" id="adminBtn">设置</button></div>
+    <div class="setting-row"><span>允许联网（总闸）</span><button class="ghost" id="networkBtn">读取中…</button><span id="networkMsg" class="muted">网页/API 共用</span></div>
+    <div class="setting-row"><span>开机自启</span><button class="ghost" id="autostartBtn">读取中…</button><span id="autostartMsg" class="muted"></span></div>
+    <div class="setting-row"><span>最近备份</span><button class="ghost" id="backupNow">立即备份</button><span id="backupMsg" class="muted"></span></div>
+    <div class="settings-foot">Key 只在后端环境变量里，这里只显示是否配置，不显示 Key。</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const sessionsEl = $('#sessions');
+  const messagesEl = $('#messages');
+  const emptyEl = $('#empty');
+  const inputEl = $('#input');
+  const sendBtn = $('#send');
+  const stopBtn = $('#stop');
+  const titleEl = $('#chatTitle');
+  const modelMeta = $('#modelMeta');
+  const modelSelect = $('#modelSelect');
+  const modePill = $('#modePill');
+  const toastEl = $('#toast');
+
+  // 兜底绑定：即使后面某个可选控件初始化失败，关键按钮仍可用。
+  document.addEventListener('click', (e) => {
+    const hit = (sel) => e.target && e.target.closest && e.target.closest(sel);
+    if (hit('#send')) send();
+    if (hit('#attachBtn')) { const fi = document.querySelector('#fileInput'); if (fi) fi.click(); }
+    if (hit('#jobsClose') || (e.target && e.target.id === 'jobsMask')) {
+      const m = document.querySelector('#jobsMask'); if (m) m.classList.remove('show');
+    }
+    if (hit('#capClose') || (e.target && e.target.id === 'capMask')) {
+      const m = document.querySelector('#capMask'); if (m) m.classList.remove('show');
+    }
+    if (hit('#jobsBtn2')) openJobs();
+    if (hit('#capBtn2')) openCap();
+    if (hit('#codeClose') || (e.target && e.target.id === 'codeMask')) closeCode();
+    if (hit('#codeBatchApply')) codeBatchApply();
+    if (hit('#codeBatchRollback')) codeBatchRollback();
+  });
+
+  const KEY = 'chuixue.chat.v1';
+  const MODEL_KEY = 'chuixue.model.v1';
+  let state = load();
+  let stream = null;
+  let streaming = false;
+  let sessionQuery = '';
+  let quoted = null;
+  let attachments = [];
+  let serverPulled = false;
+  let pushTimer = null;
+  let recording = false;
+  let recCtx = null;
+  let recStream = null;
+  let recProc = null;
+  let recChunks = [];
+  let webOn = false;
+  let localSearchOn = false;
+  let offlineMode = false;
+
+  function now() { return Date.now(); }
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+  const OLD_FAMILY_TERMS = ['家族','家史','旧事','祖辈','父辈','爷爷','奶奶','外婆','外公','姑姑','叔叔','伯父','舅舅','姨妈','1959','饥荒','挨饿','祖屋','族谱'];
+  function isOldFamilySession(s) {
+    return (s.messages || []).some(m =>
+      OLD_FAMILY_TERMS.some(x => String(m.content || '').includes(x)));
+  }
+  function cleanOldFamily(d) {
+    const before = (d.sessions || []).length;
+    d.sessions = (d.sessions || []).filter(s => !isOldFamilySession(s));
+    if (d.active && !d.sessions.some(s => s.id === d.active)) d.active = d.sessions[0]?.id || null;
+    return d.sessions.length !== before;
+  }
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (d && Array.isArray(d.sessions)) {
+        d.updatedAt = Number(d.updatedAt || 0);
+        if (cleanOldFamily(d)) localStorage.setItem(KEY, JSON.stringify(d));
+        return d;
+      }
+    } catch (e) {}
+    return { active: null, sessions: [], updatedAt: 0 };
+  }
+  function save(localOnly) {
+    state.updatedAt = now();
+    localStorage.setItem(KEY, JSON.stringify(state));
+    if (!localOnly && serverPulled) schedulePush();
+  }
+  function schedulePush() {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushServer, 600);
+  }
+  async function pushServer() {
+    try {
+      await fetch('/api/conversations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      });
+    } catch (e) {}
+  }
+  async function syncMessage(s, m) {
+    if (!s || !m || m._synced) return;
+    try {
+      const r = await fetch('/api/conversations/' + encodeURIComponent(s.id) + '/messages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: s.title || '新对话',
+          message: { role: m.role, content: m.content || '', reasoning: m.reasoning || '' }
+        })
+      });
+      if (r.ok) m._synced = true;
+    } catch (e) {}
+  }
+  async function replaceMessages(s) {
+    if (!s) return;
+    try {
+      await fetch('/api/conversations/' + encodeURIComponent(s.id) + '/replace', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: s.title || '新对话', messages: s.messages || [] })
+      });
+    } catch (e) {}
+  }
+  async function syncMeta(s) {
+    if (!s) return;
+    try {
+      await fetch('/api/conversations/' + encodeURIComponent(s.id) + '/meta', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: s.title || '新对话', pinned: !!s.pinned })
+      });
+    } catch (e) {}
+  }
+  async function pullServer() {
+    try {
+      const r = await fetch('/api/conversations');
+      if (r.ok) {
+        const d = await r.json();
+        const cleaned = cleanOldFamily(d);
+        const serverTs = Number(d.updatedAt || 0);
+        if (Array.isArray(d.sessions) && (d.sessions.length || cleaned) &&
+            (serverTs > (state.updatedAt || 0) || !state.sessions.length || cleaned)) {
+          state = { active: d.active, sessions: d.sessions, updatedAt: serverTs };
+          localStorage.setItem(KEY, JSON.stringify(state));
+          renderAll();
+        }
+      }
+    } catch (e) {}
+    serverPulled = true;
+    if (!state.sessions.length) newSession(); else renderAll();
+    schedulePush();
+  }
+  function active() {
+    return state.sessions.find(s => s.id === state.active) || null;
+  }
+  function newSession() {
+    const s = { id: uid(), title: '新对话', messages: [], updated: now() };
+    state.sessions.unshift(s);
+    state.active = s.id;
+    state.sessions = state.sessions.slice(0, 30);
+    save(); renderAll();
+    inputEl.focus();
+  }
+  function selectSession(id) { state.active = id; save(); renderAll(); }
+  function deleteSession(id, ev) {
+    ev.stopPropagation();
+    state.sessions = state.sessions.filter(s => s.id !== id);
+    if (state.active === id) state.active = state.sessions[0]?.id || null;
+    save(); renderAll();
+    fetch('/api/conversations/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    }).catch(() => {});
+  }
+  function toast(text) {
+    toastEl.textContent = text; toastEl.classList.add('show');
+    clearTimeout(toastEl._t); toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  }
+  async function copyMessage(text) {
+    const s = String(text == null ? '' : text);
+    try {
+      await navigator.clipboard.writeText(s);
+      toast('已复制');
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = s; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('已复制'); }
+      catch (err) { toast('复制失败'); }
+      ta.remove();
+    }
+  }
+  function setQuote(m) {
+    const snippet = String(m.content || '').replace(/\s+/g, ' ').slice(0, 120);
+    quoted = { role: m.role, content: snippet };
+    $('#quoteText').textContent = '引用' + (m.role === 'user' ? '你' : '时中') + '：' + snippet;
+    $('#quoteBar').hidden = false;
+    inputEl.focus();
+  }
+  function clearQuote() {
+    quoted = null;
+    $('#quoteBar').hidden = true;
+    $('#quoteText').textContent = '';
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function inline(s) {
+    return s
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+  }
+  function md(raw) {
+    const text = escapeHtml(raw || '').replace(/\r\n/g, '\n');
+    const parts = text.split(/```(\w*)\n?([\s\S]*?)```/g);
+    let out = '';
+    for (let i = 0; i < parts.length; i += 3) {
+      const plain = parts[i] || '';
+      const lang = parts[i + 1] || '';
+      const code = parts[i + 2];
+      out += renderPlain(plain);
+      if (code !== undefined) {
+        out += '<pre><button class="copy" data-copy>复制</button><code>' +
+          code.replace(/^\n+|\n+$/g, '') + '</code></pre>';
+      }
+    }
+    return out;
+  }
+  function renderPlain(text) {
+    const lines = text.split('\n');
+    let html = '', list = null;
+    const flush = () => { if (list) { html += '</' + list + '>'; list = null; } };
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) { flush(); continue; }
+      if (/^#{1,3}\s+/.test(t)) {
+        flush();
+        const n = t.match(/^#+/)[0].length;
+        html += '<h' + n + '>' + inline(t.replace(/^#+\s+/, '')) + '</h' + n + '>';
+      } else if (/^[-*]\s+/.test(t)) {
+        if (list !== 'ul') { flush(); list = 'ul'; html += '<ul>'; }
+        html += '<li>' + inline(t.replace(/^[-*]\s+/, '')) + '</li>';
+      } else if (/^\d+\.\s+/.test(t)) {
+        if (list !== 'ol') { flush(); list = 'ol'; html += '<ol>'; }
+        html += '<li>' + inline(t.replace(/^\d+\.\s+/, '')) + '</li>';
+      } else if (/^>\s?/.test(t)) {
+        flush(); html += '<blockquote>' + inline(t.replace(/^>\s?/, '')) + '</blockquote>';
+      } else {
+        flush(); html += '<p>' + inline(t) + '</p>';
+      }
+    }
+    flush();
+    return html;
+  }
+  function renderSessions() {
+    sessionsEl.innerHTML = '';
+    const q = sessionQuery.trim().toLowerCase();
+    let list = state.sessions.filter(s => {
+      if (!q) return true;
+      if ((s.title || '').toLowerCase().includes(q)) return true;
+      return (s.messages || []).some(m => (m.content || '').toLowerCase().includes(q));
+    });
+    list = list.slice().sort((a, b) => {
+      if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
+      return (Number(b.updated) || 0) - (Number(a.updated) || 0);
+    });
+    for (const s of list) {
+      const d = document.createElement('div');
+      d.className = 'session' + (s.id === state.active ? ' active' : '') +
+        (s.pinned ? ' pinned' : '');
+      d.onclick = () => selectSession(s.id);
+      d.innerHTML = '<span>' + (s.pinned ? '📌 ' : '') + escapeHtml(s.title || '新对话') + '</span>' +
+        '<span class="acts"><button class="pin" title="' + (s.pinned ? '取消置顶' : '置顶') + '">' +
+        (s.pinned ? '📌' : '⇧') + '</button>' +
+        '<button class="ren" title="重命名">✎</button>' +
+        '<button class="del" title="删除">×</button></span>';
+      d.querySelector('.pin').onclick = (e) => togglePin(s.id, e);
+      d.querySelector('.ren').onclick = (e) => renameSession(s.id, e);
+      d.querySelector('.del').onclick = (e) => deleteSession(s.id, e);
+      sessionsEl.appendChild(d);
+    }
+  }
+  function togglePin(id, ev) {
+    ev.stopPropagation();
+    const s = state.sessions.find(x => x.id === id);
+    if (!s) return;
+    s.pinned = !s.pinned;
+    save(); renderAll();
+    syncMeta(s);
+    toast(s.pinned ? '已置顶' : '已取消置顶');
+  }
+  function renameSession(id, ev) {
+    ev.stopPropagation();
+    const s = state.sessions.find(x => x.id === id);
+    if (!s) return;
+    const t = window.prompt('重命名对话', s.title || '新对话');
+    if (t == null) return;
+    const title = t.trim().slice(0, 30);
+    if (!title) return;
+    s.title = title;
+    save(); renderAll();
+    syncMeta(s);
+  }
+  function renderMessages() {
+    const s = active();
+    messagesEl.innerHTML = '';
+    if (!s || !s.messages.length) {
+      emptyEl.style.display = '';
+      messagesEl.appendChild(emptyEl);
+      titleEl.textContent = '新对话';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    titleEl.textContent = s.title || '新对话';
+    for (const m of s.messages) {
+      const row = document.createElement('div');
+      row.className = 'msg ' + (m.role === 'user' ? 'user' : 'ai');
+      row.innerHTML = '<div class="avatar">' + (m.role === 'user' ? '你' : '中') + '</div>' +
+        '<div class="body"><div class="who">' + (m.role === 'user' ? '你' : '时中') +
+        (m.tool ? '<span class="toolbadge">工具：' + escapeHtml(m.tool) + '</span>' : '') + '</div>' +
+        '<button class="msgquote" title="引用这条消息">引用</button>' +
+        '<button class="msgcopy" title="复制这条消息">复制</button>' +
+        '<div class="bubble">' +
+        (m.reasoning ? '<details class="reasoning"><summary>思考过程</summary><div class="r-body">' +
+          escapeHtml(m.reasoning) + '</div></details>' : '') +
+        '<div class="content">' + md(m.content) + '</div></div></div>';
+      row.querySelector('.msgcopy').onclick = () => copyMessage(m.content);
+      row.querySelector('.msgquote').onclick = () => setQuote(m);
+      messagesEl.appendChild(row);
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+  function renderAll() { renderSessions(); renderMessages(); }
+
+  function appendMessage(role, content) {
+    const s = active();
+    if (!s) { newSession(); }
+    const cur = active();
+    cur.messages.push({ role, content });
+    if (role === 'user' && (!cur.title || cur.title === '新对话')) {
+      cur.title = content.replace(/\s+/g, ' ').slice(0, 22) || '新对话';
+    }
+    cur.updated = now();
+    save(); renderMessages();
+    if (role === 'user') syncMessage(cur, cur.messages[cur.messages.length - 1]);
+  }
+
+  function encodeWav(samples, sampleRate) {
+    const buf = new ArrayBuffer(44 + samples.length * 2);
+    const v = new DataView(buf);
+    const ws = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); ws(8, 'WAVE');
+    ws(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true); v.setUint32(24, sampleRate, true);
+    v.setUint32(28, sampleRate * 2, true); v.setUint16(32, 2, true);
+    v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, samples.length * 2, true);
+    let off = 44;
+    for (let i = 0; i < samples.length; i++, off += 2) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return buf;
+  }
+  function resample(input, from, to) {
+    if (from === to) return input;
+    const n = Math.max(1, Math.round(input.length * to / from));
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const p = i * from / to;
+      const j = Math.floor(p);
+      const t = p - j;
+      out[i] = (input[j] || 0) * (1 - t) + (input[j + 1] || 0) * t;
+    }
+    return out;
+  }
+  function stopRecTracks() {
+    if (recStream) recStream.getTracks().forEach(t => t.stop());
+    if (recProc) { try { recProc.disconnect(); } catch (e) {} }
+    if (recCtx) { try { recCtx.close(); } catch (e) {} }
+    recStream = null; recProc = null; recCtx = null;
+  }
+  async function refreshTts() {
+    try {
+      const r = await fetch('/api/voice');
+      const d = await r.json();
+      const b = $('#ttsBtn');
+      if (!b) return;
+      b.textContent = d.enabled ? '朗读开' : '朗读关';
+      b.dataset.on = d.enabled ? '1' : '0';
+      b.title = d.backend === 'off' ? '本机语音后端关闭' : ('后端：' + d.backend);
+    } catch (e) { /* 静默 */ }
+  }
+  async function toggleTts() {
+    try {
+      const on = $('#ttsBtn').dataset.on !== '1';
+      const r = await fetch('/api/voice', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: on }) });
+      const d = await r.json();
+      toast(d.enabled ? '朗读已开' : '朗读已关');
+      refreshTts();
+    } catch (e) { toast('切换朗读失败：' + e.message); }
+  }
+  let streamSpeak = false;
+  let streamBuf = '';
+  function streamToggle() {
+    if (!('speechSynthesis' in window)) return toast('浏览器不支持流式朗读');
+    streamSpeak = !streamSpeak;
+    const b = $('#streamBtn');
+    b.textContent = streamSpeak ? '流式开' : '流式关';
+    b.dataset.on = streamSpeak ? '1' : '0';
+    if (!streamSpeak) { try { speechSynthesis.cancel(); } catch (e) {} streamBuf = ''; }
+    if (streamSpeak) {
+      fetch('/api/voice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: false }) }).then(refreshTts).catch(() => {});
+      toast('流式朗读已开');
+    }
+  }
+  function streamFeed(text) {
+    if (!streamSpeak || !text) return;
+    streamBuf += text;
+    let i;
+    while ((i = streamBuf.search(/[。！？\n]/)) >= 0) {
+      const sentence = streamBuf.slice(0, i + 1).trim();
+      streamBuf = streamBuf.slice(i + 1);
+      if (sentence.length > 1) speakSentence(sentence);
+    }
+  }
+  function streamFlush() {
+    const s = streamBuf.trim();
+    streamBuf = '';
+    if (streamSpeak && s.length > 1) speakSentence(s);
+  }
+  function speakSentence(text) {
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN'; u.rate = 1.0;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  async function startVoice() {
+    if (recording || streaming) return;
+    try {
+      recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = recCtx.createMediaStreamSource(recStream);
+      recProc = recCtx.createScriptProcessor(4096, 1, 1);
+      recChunks = [];
+      recProc.onaudioprocess = (e) => {
+        if (recording) recChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+      };
+      src.connect(recProc);
+      recProc.connect(recCtx.destination);
+      recording = true;
+      const b = $('#voiceBtn');
+      b.textContent = '松开识别…';
+      b.classList.add('rec');
+    } catch (e) {
+      stopRecTracks();
+      toast('麦克风打不开：' + e.message);
+    }
+  }
+  async function stopVoice() {
+    if (!recording) return;
+    recording = false;
+    const rate = recCtx ? recCtx.sampleRate : 48000;
+    const b = $('#voiceBtn');
+    b.textContent = '识别中…'; b.disabled = true;
+    const all = [];
+    let total = 0;
+    recChunks.forEach(c => { all.push(c); total += c.length; });
+    const merged = new Float32Array(total);
+    let off = 0;
+    all.forEach(c => { merged.set(c, off); off += c.length; });
+    stopRecTracks();
+    if (!merged.length) { b.textContent = '语音'; b.disabled = false; toast('没录到声音'); return; }
+    try {
+      const wav = encodeWav(resample(merged, rate, 16000), 16000);
+      const r = await fetch('/api/asr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data_b64: b64(wav) })
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '识别失败');
+      inputEl.value = (inputEl.value ? inputEl.value + ' ' : '') + (d.text || '');
+      autoGrow(); inputEl.focus();
+      toast(d.text ? '已转成文字' : '没听清');
+    } catch (e) {
+      toast('语音识别失败：' + e.message);
+    } finally {
+      b.textContent = '按住说话'; b.disabled = false; b.classList.remove('rec');
+    }
+  }
+
+  let streamAsrOn = false;
+  let meetingOn = false;
+  let streamAsrSid = '';
+  let streamAsrCtx = null;
+  let streamAsrStream = null;
+  let streamAsrProc = null;
+  let streamAsrBuf = [];
+  let streamAsrPrefix = '';
+  let streamAsrChain = Promise.resolve();
+
+  function pcm16(samples) {
+    const buf = new ArrayBuffer(samples.length * 2);
+    const v = new DataView(buf);
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      v.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return buf;
+  }
+  async function startStreamAsr(meeting = false) {
+    if (streamAsrOn || recording) return;
+    meetingOn = !!meeting;
+    const b = meeting ? $('#meetingBtn') : $('#streamVoiceBtn');
+    try {
+      const r = await fetch(meeting ? '/api/meeting/start' : '/api/asr/stream/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '流式识别启动失败');
+      streamAsrSid = d.sid;
+      streamAsrPrefix = (!meeting && inputEl.value) ? inputEl.value.replace(/\s+$/, '') + ' ' : '';
+      streamAsrStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamAsrCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = streamAsrCtx.createMediaStreamSource(streamAsrStream);
+      streamAsrProc = streamAsrCtx.createScriptProcessor(4096, 1, 1);
+      streamAsrBuf = [];
+      streamAsrProc.onaudioprocess = (e) => {
+        if (!streamAsrOn) return;
+        streamAsrBuf.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+        const n = streamAsrBuf.reduce((a, x) => a + x.length, 0);
+        if (n >= 8192) {
+          const take = streamAsrBuf; streamAsrBuf = [];
+          queueStreamChunk(take, streamAsrCtx.sampleRate);
+        }
+      };
+      const mute = streamAsrCtx.createGain();
+      mute.gain.value = 0;
+      src.connect(streamAsrProc);
+      streamAsrProc.connect(mute);
+      mute.connect(streamAsrCtx.destination);
+      streamAsrOn = true;
+      b.textContent = meeting ? '会议中…' : '连续听…'; b.classList.add('rec');
+      toast(meeting ? '会议开始，结束后生成纪要' : '开始连续识别，边说边出字');
+    } catch (e) {
+      streamAsrOn = false;
+      b.textContent = meeting ? '会议' : '连续听'; b.classList.remove('rec');
+      toast((meeting ? '会议开始失败：' : '连续识别打不开：') + e.message);
+    }
+  }
+  function queueStreamChunk(chunks, rate) {
+    const total = chunks.reduce((a, x) => a + x.length, 0);
+    const merged = new Float32Array(total);
+    let off = 0;
+    chunks.forEach(c => { merged.set(c, off); off += c.length; });
+    streamAsrChain = streamAsrChain.then(() => sendStreamChunk(merged, rate)).catch(() => {});
+  }
+  async function sendStreamChunk(samples, rate) {
+    if (!streamAsrSid) return;
+    const pcm = pcm16(resample(samples, rate, 16000));
+    const r = await fetch(meetingOn ? '/api/meeting/chunk' : '/api/asr/stream/chunk', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sid: streamAsrSid, data_b64: b64(pcm) })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) return;
+    const text = d.punctuated || ((d.text || '') + (d.partial ? ' ' + d.partial : ''));
+    if (text && !meetingOn) { inputEl.value = streamAsrPrefix + text; autoGrow(); }
+  }
+  async function stopStreamAsr() {
+    if (!streamAsrOn) return;
+    streamAsrOn = false;
+    const b = meetingOn ? $('#meetingBtn') : $('#streamVoiceBtn');
+    b.textContent = meetingOn ? '生成纪要…' : '处理中…'; b.disabled = true;
+    if (streamAsrStream) streamAsrStream.getTracks().forEach(t => t.stop());
+    if (streamAsrProc) { try { streamAsrProc.disconnect(); } catch (e) {} }
+    if (streamAsrCtx) { try { streamAsrCtx.close(); } catch (e) {} }
+    if (streamAsrBuf.length) queueStreamChunk(streamAsrBuf.splice(0), 48000);
+    try {
+      await streamAsrChain;
+      const r = await fetch(meetingOn ? '/api/meeting/stop' : '/api/asr/stream/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sid: streamAsrSid }) });
+      const d = await r.json();
+      if (meetingOn) toast(d.ok ? ('会议纪要已生成：' + (d.path || '')) : ('会议收尾失败：' + (d.error || '')));
+      else {
+        if (d.ok && (d.punctuated || d.text)) inputEl.value = streamAsrPrefix + (d.punctuated || d.text);
+        toast(d.text ? '连续识别完成' : '没听清');
+      }
+    } catch (e) { toast('连续识别收尾失败：' + e.message); }
+    streamAsrSid = ''; streamAsrBuf = []; streamAsrProc = null; streamAsrCtx = null; streamAsrStream = null;
+    b.textContent = meetingOn ? '会议' : '连续听'; b.disabled = false; b.classList.remove('rec');
+    meetingOn = false;
+    autoGrow(); inputEl.focus();
+  }
+  function setStreaming(on) {
+    streaming = on;
+    sendBtn.disabled = on;
+    stopBtn.style.display = on ? 'inline-block' : 'none';
+    inputEl.disabled = on;
+  }
+
+  function renderFiles() {
+    const box = $('#fileChips');
+    box.innerHTML = '';
+    attachments.forEach((a, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'filechip';
+      chip.title = a.text ? a.text.slice(0, 300) : a.name;
+      chip.innerHTML = '<b>' + escapeHtml(a.name) + '</b><button title="移除">×</button>';
+      chip.querySelector('button').onclick = () => { attachments.splice(i, 1); renderFiles(); };
+      box.appendChild(chip);
+    });
+  }
+
+  function b64(buf) {
+    const bytes = new Uint8Array(buf);
+    let s = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(s);
+  }
+
+  const dropZone = document.querySelector('.main');
+  if (dropZone) {
+    ['dragenter', 'dragover'].forEach(ev => dropZone.addEventListener(ev, e => {
+      e.preventDefault(); e.stopPropagation(); dropZone.classList.add('dragover');
+    }));
+    ['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, e => {
+      e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('dragover');
+    }));
+    dropZone.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  }
+  document.addEventListener('paste', e => {
+    if (!e.clipboardData) return;
+    const files = Array.from(e.clipboardData.files || []);
+    if (!files.length) {
+      for (const item of Array.from(e.clipboardData.items || [])) {
+        if (item.kind === 'file') { const f = item.getAsFile(); if (f) files.push(f); }
+      }
+    }
+    if (files.length) { e.preventDefault(); addFiles(files); }
+  });
+
+  async function addFiles(files) {
+    for (const f of Array.from(files || [])) {
+      if (attachments.length >= 3) { toast('最多 3 个附件'); break; }
+      if (f.size > 10 * 1024 * 1024) { toast(f.name + ' 超过 10MB'); continue; }
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const textExt = ['txt', 'md', 'py', 'json', 'csv', 'log', 'yaml', 'yml', 'html', 'js', 'ts', 'sql'];
+      const imageExt = ['png', 'jpg', 'jpeg', 'webp', 'bmp'];
+      try {
+        let text;
+        if (imageExt.includes(ext)) {
+          const body = JSON.stringify({
+            name: f.name, mime: f.type || ('image/' + ext),
+            data_b64: b64(await f.arrayBuffer()), question: '请描述图片内容，并提取其中可见文字。'
+          });
+          const r = await fetch('/api/vision', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body
+          });
+          const d = await r.json();
+          if (!r.ok || !d.ok) throw new Error(d.error || '图片理解失败');
+          text = '[图片理解]\n' + d.text;
+        } else if (textExt.includes(ext)) {
+          text = await f.text();
+          text = text.slice(0, 24000);
+        } else {
+          const body = JSON.stringify({ name: f.name, data_b64: b64(await f.arrayBuffer()) });
+          const r = await fetch('/api/extract', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body
+          });
+          const d = await r.json();
+          if (!r.ok || !d.ok) throw new Error(d.error || '解析失败');
+          text = d.text;
+        }
+        let docId = '';
+        try {
+          const ir = await fetch('/api/doc/index', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: f.name, text })
+          });
+          const id = await ir.json();
+          if (ir.ok && id.ok) docId = id.doc_id;
+        } catch (e) {}
+        attachments.push({ name: f.name, text, docId });
+        renderFiles();
+      } catch (e) {
+        toast(f.name + '：' + e.message);
+      }
+    }
+  }
+
+  function officeTaskFromText(text) {
+    const t = String(text || '');
+    if (/(会议纪要|纪要)/.test(t)) return 'minutes';
+    if (/(摘要|总结)/.test(t)) return 'summary';
+    if (/(待办|行动项)/.test(t)) return 'actions';
+    if (/(excel|表格|清洗)/i.test(t)) return 'excel';
+    return '';
+  }
+  async function officeInChat(task, raw) {
+    const items = attachments.map(a => ({name:a.name, text:a.text}));
+    const names = attachments.map(a => a.name).join('、');
+    inputEl.value = ''; autoGrow(); attachments = []; renderFiles(); clearQuote();
+    appendMessage('user', raw + (names ? '\n[附件：' + names + ']' : ''));
+    const ai = {role:'ai', content:'处理中…'}; active().messages.push(ai); renderMessages();
+    setStreaming(true);
+    try {
+      const r = await fetch('/api/office/batch', {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({task, texts:items, title:raw})});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || '失败');
+      ai.content = (d.items || []).map((x,i) => '## ' + (x.name || ('文件'+(i+1))) +
+        (x.ok ? '\n\n' + (x.content || '') : '\n\n失败：' + (x.error || ''))).join('\n\n---\n\n') || '没有结果';
+    } catch(e) { ai.content = '办公批处理失败：' + e.message; }
+    setStreaming(false); save(); renderMessages();
+  }
+
+  async function send(textOverride) {
+    const raw = String(textOverride ?? inputEl.value).trim();
+    if (!raw && !attachments.length) return;
+    if (raw.trim() === '代码') {
+      inputEl.value = ''; autoGrow(); appendMessage('user', raw); openCode(); return;
+    }
+    const officeTask = officeTaskFromText(raw);
+    if (attachments.length && officeTask) { await officeInChat(officeTask, raw); return; }
+    if (streaming) {
+      // 上一次流式连接已经断了但状态没复位：允许发送时自愈，否则回车永远被吞。
+      if (stream) return;
+      setStreaming(false);
+    }
+    let searchText = '';
+    if (localSearchOn && raw) {
+      try {
+        const r = await fetch('/api/local_search', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: raw })
+        });
+        const d = await r.json();
+        if (!r.ok || !d.ok) throw new Error(d.error || '本地搜索失败');
+        const lines = ['[本地搜索：' + raw + ']'];
+        (d.results || []).forEach((x, i) => lines.push((i + 1) + '. ' + x.title + '\n' + x.content));
+        searchText = lines.join('\n');
+      } catch (e) {
+        toast('本地搜索失败：' + e.message);
+      }
+    }
+    if (webOn && raw) {
+      try {
+        const r = await fetch('/api/search', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: raw, limit: 5 })
+        });
+        const d = await r.json();
+        if (!r.ok || !d.ok) throw new Error(d.error || '搜索失败');
+        const lines = ['[联网搜索：' + raw + ']'];
+        if (d.answer) lines.push('摘要：' + d.answer);
+        (d.results || []).forEach((x, i) => {
+          lines.push((i + 1) + '. ' + x.title + '\n' + x.content + '\n' + x.url);
+        });
+        searchText = lines.join('\n');
+      } catch (e) {
+        toast('联网搜索失败：' + e.message);
+      }
+    }
+    const attachmentParts = [];
+    for (let i = 0; i < attachments.length; i++) {
+      const a = attachments[i];
+      let body = a.text;
+      if (a.docId) {
+        try {
+          const q = raw || a.text.slice(0, 200);
+          const r = await fetch('/api/doc/search', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ doc_id: a.docId, q, k: 5 })
+          });
+          const d = await r.json();
+          if (r.ok && d.ok && (d.chunks || []).length) {
+            body = d.chunks.map(c => '[片段 ' + c.seq + ']\n' + c.text).join('\n\n');
+          }
+        } catch (e) {}
+      }
+      attachmentParts.push('[附件' + (i + 1) + ' ' + a.name + ']\n' + body);
+    }
+    const attachmentText = attachmentParts.join('\n\n');
+    const quoteLine = quoted
+      ? '[引用' + (quoted.role === 'user' ? '你' : '时中') + ']\n' + quoted.content + '\n\n' + raw
+      : raw;
+    const text = [quoteLine, searchText, attachmentText].filter(Boolean).join('\n\n');
+    if (!text) return;
+    if (!active()) newSession();
+    inputEl.value = ''; autoGrow();
+    attachments = []; renderFiles(); clearQuote();
+    appendMessage('user', text);
+    const s = active();
+    const ai = { role: 'ai', content: '', reasoning: '' };
+    s.messages.push(ai);
+    renderMessages();
+    setStreaming(true);
+    if (streamSpeak) { try { speechSynthesis.cancel(); } catch (e) {} streamBuf = ''; }
+
+    const model = '';
+    const aiRow = messagesEl.querySelector('.msg.ai:last-of-type');
+    const aiNode = aiRow && aiRow.querySelector('.content');
+    if (aiNode) aiNode.classList.add('typing');
+    let reasonBox = null;
+    function ensureReason() {
+      if (!aiRow) return null;
+      if (!reasonBox) {
+        reasonBox = document.createElement('details');
+        reasonBox.className = 'reasoning';
+        reasonBox.innerHTML = '<summary>思考过程</summary><div class="r-body"></div>';
+        const body = aiRow.querySelector('.body');
+        const bubble = aiRow.querySelector('.bubble') || body;
+        bubble.insertBefore(reasonBox, bubble.querySelector('.content'));
+      }
+      return reasonBox.querySelector('.r-body');
+    }
+
+    async function nonStream(finalText) {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 90000);
+      try {
+        const r = await fetch('/api/chat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: finalText, remember: false, model }),
+          signal: ctl.signal
+        });
+        const d = await r.json();
+        ai.content = d.response || d.error || '（没有返回）';
+      } catch (e) {
+        if (!ai.content) ai.content = '连接超时或失败：' + e.message;
+      } finally {
+        clearTimeout(timer);
+        finish();
+      }
+    }
+
+    // 长文本直接非流式；普通文本先流式，12 秒无首字自动回退。
+    if (text.length > 1500) {
+      await nonStream(text);
+      return;
+    }
+
+    let ctrl = new AbortController();
+    stream = { close() { try { ctrl.abort(); } catch (e) {} } };
+    let doneSeen = false;
+    const hardTimer = setTimeout(() => {
+      if (doneSeen) return;
+      if (stream) { stream.close(); stream = null; }
+      if (!ai.content) ai.content = '连接超时，已恢复输入，可以再试一次。';
+      finish();
+    }, 120000);
+    let gotDelta = false;
+    let fallbackStarted = false;
+    const fallbackTimer = setTimeout(() => {
+      if (doneSeen || gotDelta || fallbackStarted) return;
+      fallbackStarted = true;
+      if (stream) { stream.close(); stream = null; }
+      nonStream(text);
+    }, 12000);
+    const clearFallback = () => clearTimeout(fallbackTimer);
+    const dispatch = (name, raw) => {
+      try {
+        const d = JSON.parse(raw || '{}');
+        if (name === 'status') { if (d.text) toast(d.text, 8000); return; }
+        if (name === 'reasoning') {
+          if (d.text) { ai.reasoning += d.text; const box = ensureReason(); if (box) box.textContent += d.text; }
+          return;
+        }
+        if (name === 'delta') {
+          if (d.text) { gotDelta = true; clearFallback(); ai.content += d.text; if (aiNode) aiNode.innerHTML = md(ai.content); if (streamSpeak) streamFeed(d.text); }
+          return;
+        }
+        if (name === 'done') {
+          clearFallback();
+          const tu = d.trace && d.trace.tool_use;
+          const cur = active();
+          const last = cur && cur.messages[cur.messages.length - 1];
+          if (tu && tu.used && last && last.role === 'ai') last.tool = tu.tool || 'tool';
+          streamFlush(); doneSeen = true; clearTimeout(hardTimer); finish();
+          return;
+        }
+        if (name === 'error' && d.error) ai.reasoning += '\n[流式错误] ' + d.error;
+      } catch (e) {}
+    };
+    (async () => {
+      try {
+        const resp = await fetch('/api/events', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text, model: model || ''}), signal: ctrl.signal
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const reader = resp.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, {stream: true});
+          let cut;
+          while ((cut = buf.indexOf('\n\n')) >= 0) {
+            const part = buf.slice(0, cut); buf = buf.slice(cut + 2);
+            let name = 'message', data = '';
+            for (const line of part.split('\n')) {
+              if (line.startsWith('event:')) name = line.slice(6).trim();
+              else if (line.startsWith('data:')) data += line.slice(5).trim();
+            }
+            dispatch(name, data);
+          }
+        }
+        if (!doneSeen) {
+          clearTimeout(hardTimer);
+          if (gotDelta || ai.content) finish();
+          else nonStream(text);
+        }
+      } catch (e) {
+        if (ctrl.signal.aborted) return;
+        clearTimeout(hardTimer);
+        if (gotDelta || ai.content) { clearFallback(); finish(); return; }
+        fallbackStarted = true; clearFallback(); nonStream(text);
+      }
+    })();
+  }
+
+  function finish() {
+    if (stream) { stream.close(); stream = null; }
+    const s = active();
+    const last = s && s.messages[s.messages.length - 1];
+    if (last && last.role === 'ai') last.content = last.content || '（没有内容）';
+    setStreaming(false);
+    try { inputEl.focus(); } catch (e) {}
+    save(); renderMessages();
+    if (last && last.role === 'ai') syncMessage(s, last);
+  }
+
+  function stop() {
+    if (!streaming) return;
+    if (stream) { stream.close(); stream = null; }
+    const s = active();
+    const last = s && s.messages[s.messages.length - 1];
+    if (last && last.role === 'ai') last.content = (last.content || '') + '\n\n（已停止）';
+    setStreaming(false); save(); renderMessages(); toast('已停止');
+    if (last && last.role === 'ai') syncMessage(s, last);
+  }
+
+  async function regenerate() {
+    if (streaming) return;
+    const s = active();
+    if (!s) return;
+    let i = s.messages.length - 1;
+    if (i >= 0 && s.messages[i].role === 'ai') s.messages.pop();
+    i = s.messages.length - 1;
+    if (i < 0 || s.messages[i].role !== 'user') return toast('没有可重答的问题');
+    const q = s.messages[i].content;
+    s.messages.pop(); save();
+    await replaceMessages(s);
+    send(q);
+  }
+
+  function autoGrow() {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+  }
+
+  const MODEL_PRESETS = {
+    deepseek: ['https://api.deepseek.com/v1', 'deepseek-chat'],
+    openai: ['https://api.openai.com/v1', 'gpt-4o-mini'],
+    moonshot: ['https://api.moonshot.cn/v1', 'moonshot-v1-8k'],
+    zhipu: ['https://open.bigmodel.cn/api/paas/v4', 'glm-4-plus'],
+    minimax: ['https://api.minimaxi.com/v1', 'MiniMax-M3'],
+    hunyuan: ['https://api.hunyuan.cloud.tencent.com/v1', 'hunyuan-turbos-latest'],
+    qwen: ['https://dashscope.aliyuncs.com/compatible-mode/v1', 'qwen-plus'],
+    mimo: ['', ''],
+    custom: ['', '']
+  };
+  function applyModelPreset() {
+    const key = $('#modelProvider').value;
+    const [base, model] = MODEL_PRESETS[key] || ['', ''];
+    if (base) $('#modelBase').value = base;
+    if (model) $('#modelName').value = model;
+    if (!$('#modelConfigName').value.trim()) $('#modelConfigName').value = key === 'custom' ? '' : $('#modelProvider').selectedOptions[0].text;
+  }
+
+  async function openAdmin() {
+    $('#adminMask').classList.add('show');
+    applyModelPreset();
+    await loadAdmin();
+  }
+  async function loadAdmin() {
+    try {
+      const [m, c] = await Promise.all([fetch('/api/models/installed'), fetch('/api/custom_models')]);
+      const md = await m.json(), cd = await c.json();
+      $('#installedModels').innerHTML = (md.items || []).filter(x => x.name).map(x => '<div>' + escapeHtml(x.name) + '</div>').join('') || '无本地模型';
+      $('#customModelList').innerHTML = (cd.items || []).filter(x => x.kind === 'api').map(x => '<div>' + escapeHtml(x.label || x.name) + ' · ' + escapeHtml(x.model || '') + '</div>').join('') || '未添加 API 模型';
+    } catch (e) { $('#installedModels').textContent = '读取失败：' + e.message; }
+  }
+  async function pullModel() {
+    const n = $('#modelPullName').value.trim(); if (!n) return;
+    $('#installedModels').textContent = '拉取中…';
+    try {
+      const r = await fetch('/api/models/pull', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:n})});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || '失败'); await loadAdmin();
+    } catch (e) { $('#installedModels').textContent = '失败：' + e.message; }
+  }
+  function customPayload() {
+    return {name:$('#modelConfigName').value.trim(), label:$('#modelConfigName').value.trim(),
+      kind:$('#modelProvider').value === 'ollama' ? 'local' : 'api',
+      provider:$('#modelProvider').value, base_url:$('#modelBase').value.trim(),
+      key:$('#modelKey').value.trim(), model:$('#modelName').value.trim(),
+      multimodal:$('#modelMulti').value === '1'};
+  }
+  async function testCustom() {
+    $('#modelTestMsg').textContent = '测试中…';
+    try {
+      const r = await fetch('/api/custom_models', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...customPayload(), action:'test'})});
+      const d = await r.json();
+      if (d.ok) {
+        await saveCustom();
+        $('#modelTestMsg').textContent = '连接成功，已保存并选中';
+      } else {
+        $('#modelTestMsg').textContent = '失败：' + (d.detail || d.error || '');
+      }
+    } catch (e) { $('#modelTestMsg').textContent = '失败：' + e.message; }
+  }
+  async function saveCustom() {
+    try {
+      const r = await fetch('/api/custom_models', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(customPayload())});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || '失败');
+      await fetch('/api/settings/custom_model', {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name: customPayload().name})});
+      $('#modelTestMsg').textContent = '已保存并选中'; await loadAdmin(); await loadScenarios();
+    } catch (e) { $('#modelTestMsg').textContent = '失败：' + e.message; }
+  }
+  async function loadOnboarding() {
+    try {
+      const r = await fetch('/api/onboarding');
+      const d = await r.json();
+      $('#onboardDir').textContent = d.data_dir || '';
+      if (!d.done) $('#onboardMask').classList.add('show');
+    } catch (e) {}
+  }
+  async function finishOnboarding() {
+    try { await fetch('/api/onboarding/complete', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'}); } catch (e) {}
+    $('#onboardMask').classList.remove('show');
+  }
+  async function loadNetwork() {
+    try {
+      const r = await fetch('/api/settings/network');
+      const d = await r.json();
+      $('#networkBtn').textContent = d.online ? '开' : '关';
+      $('#networkBtn').dataset.on = d.online ? '1' : '0';
+      $('#networkMsg').textContent = d.online ? '可访问网页/接口' : '强制断网，本地模型照常';
+    } catch (e) { $('#networkMsg').textContent = '读取失败'; }
+  }
+  async function toggleNetwork() {
+    const on = $('#networkBtn').dataset.on === '1';
+    try {
+      const r = await fetch('/api/settings/network', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({online: !on})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#networkBtn').dataset.on = d.online ? '1' : '0';
+      $('#networkBtn').textContent = d.online ? '开' : '关';
+      $('#networkMsg').textContent = d.online ? '已允许联网' : '已断网';
+    } catch (e) { $('#networkMsg').textContent = '失败：' + e.message; }
+  }
+  async function loadStartup() {
+    try {
+      const r = await fetch('/api/settings/autostart');
+      const d = await r.json();
+      $('#autostartBtn').textContent = d.enabled ? '开' : '关';
+      $('#autostartBtn').dataset.on = d.enabled ? '1' : '0';
+      $('#autostartMsg').textContent = d.enabled ? '开机自动打开知衡' : '关闭';
+    } catch (e) { $('#autostartMsg').textContent = '读取失败'; }
+  }
+  async function toggleStartup() {
+    const on = $('#autostartBtn').dataset.on === '1';
+    try {
+      const r = await fetch('/api/settings/autostart', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({enabled: !on})});
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '失败');
+      $('#autostartBtn').dataset.on = d.enabled ? '1' : '0';
+      $('#autostartBtn').textContent = d.enabled ? '开' : '关';
+      $('#autostartMsg').textContent = d.enabled ? '已开启' : '已关闭';
+    } catch (e) { $('#autostartMsg').textContent = '失败：' + e.message; }
+  }
+  async function loadBackup() {
+    try {
+      const r = await fetch('/api/backup/status');
+      const d = await r.json();
+      $('#backupMsg').textContent = d.ok ? (d.path.split('\\').pop() + ' · ' + Math.round(d.bytes/1024) + ' KB') : '还没有备份';
+    } catch (e) { $('#backupMsg').textContent = '读取失败'; }
+  }
+  async function backupNow() {
+    $('#backupMsg').textContent = '备份中…';
+    try {
+      const r = await fetch('/api/backup/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '失败');
+      $('#backupMsg').textContent = '完成：' + d.path.split('\\').pop();
+    } catch (e) { $('#backupMsg').textContent = '失败：' + e.message; }
+  }
+  async function openSettings() {
+    $('#settingsMask').classList.add('show');
+    const body = $('#settingsBody');
+    body.style.opacity = '0.55';
+    try {
+      const [r, ur, tr, qa] = await Promise.all([
+        fetch('/api/settings'),
+        fetch('/api/usage').catch(() => null),
+        fetch('/api/tools').catch(() => null),
+        fetch('/api/qwen_agent').catch(() => null)
+      ]);
+      const d = await r.json();
+      const u = ur && ur.ok ? await ur.json() : null;
+      const tu = tr && tr.ok ? await tr.json() : null;
+      const q = qa && qa.ok ? await qa.json() : null;
+      const ok = (v) => v ? '<span class="setting-ok">已配置</span>' : '<span class="setting-no">未配置</span>';
+      const engine = q ? ('<div class="setting-row"><span>Agent 引擎</span><b>' +
+        (q.enabled ? '<span class="setting-ok">Qwen-Agent</span>' : '内置 Orchestrator') +
+        '</b><button class="ghost" id="engineBtn"' + (q.installed ? '' : ' disabled') + '>' +
+        (q.enabled ? '切回内置' : '切到 Qwen-Agent') + '</button></div>') : '';
+      const tools = tu ? ('<div class="setting-row"><span>内置工具</span><span>' +
+        (tu.enabled && tu.tools_enabled ? '<span class="setting-ok">已开启</span>' : '<span class="setting-no">未开启</span>') +
+        ' · ' + (tu.tools || []).length + ' 个工具 </span><button class="ghost" id="toolsBtn">' +
+        (tu.enabled && tu.tools_enabled ? '关闭' : '开启') + '</button></div>') : '';
+      const usage = u ? ('<div class="setting-row"><span>今日模型调用</span><b>' +
+        (u.responses || 0) + ' 次 · ¥' + Number(u.cost || 0).toFixed(4) +
+        ' · ' + (u.tokens || 0) + ' tokens</b></div>' +
+        (u.by_model || []).slice(0, 3).map(x =>
+          '<div class="setting-row"><span>　' + escapeHtml(x.model_id) + '</span><span>' +
+          x.calls + ' 次 · ¥' + Number(x.cost || 0).toFixed(4) + '</span></div>').join('')
+        ) : '';
+      body.innerHTML =
+        '<div class="setting-row"><span>运行模式</span><b>' +
+        (d.offline ? '<span class="setting-no">离线（不出网）</span>' : '<span class="setting-ok">在线</span>') +
+        '</b></div>' +
+        '<div class="setting-row"><span>Profile</span><b>' + escapeHtml(d.profile || '') + '</b></div>' +
+        '<div class="setting-row"><span>版本</span><b>' + escapeHtml(d.version || '开发版') + '</b></div>' +
+
+        '<div class="setting-row"><span>上下文预算</span><b>' + (d.context || 0) + ' tokens</b></div>' +
+        '<div class="setting-row"><span>图片视觉</span><span>' + ok(d.vision && (d.vision.configured || d.vision.offline_ocr)) +
+        ' · ' + escapeHtml((d.vision && d.vision.offline_ocr) ? '离线 OCR' : ((d.vision && d.vision.model) || '')) + '</span></div>' +
+        '<div class="setting-row"><span>联网搜索</span><span>' + ok(d.search && d.search.configured) +
+        ' · ' + escapeHtml((d.search && d.search.provider) || '') + '</span></div>' +
+        '<div class="setting-row"><span>语音识别</span><span>' + ok(d.asr && d.asr.available) +
+        ' · ' + escapeHtml((d.asr && d.asr.backend) || '') + '</span></div>' +
+        '<div class="setting-row"><span>服务端会话</span><b>' + (d.conversations || 0) + ' 个</b></div>' +
+        engine + tools +
+        usage;
+      const toolsBtn = body.querySelector('#toolsBtn');
+      if (toolsBtn) toolsBtn.onclick = toggleTools;
+      const engineBtn = body.querySelector('#engineBtn');
+      if (engineBtn) engineBtn.onclick = toggleAgentEngine;
+      const backupBtn = body.querySelector('#backupNow');
+      if (backupBtn) backupBtn.onclick = backupNow;
+    } catch (e) {
+      body.textContent = '读取失败：' + e.message;
+    } finally {
+      body.style.opacity = '';
+    }
+  }
+  function closeSettings() { $('#settingsMask').classList.remove('show'); }
+  async function toggleAgentEngine() {
+    try {
+      const cur = await (await fetch('/api/qwen_agent')).json();
+      const r = await fetch('/api/qwen_agent/toggle', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({enabled: !cur.enabled})});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || '失败');
+      toast(d.enabled ? '已切到 Qwen-Agent' : '已切回内置引擎');
+      await openSettings();
+    } catch (e) { toast('切换失败：' + e.message); }
+  }
+  async function toggleTools() {
+    try {
+      const cur = (await (await fetch('/api/tools')).json());
+      const on = !(cur.enabled && cur.tools_enabled);
+      const r = await fetch('/api/tools/toggle', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({enabled:on})});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || '失败');
+      toast(on ? '工具调用已开启' : '工具调用已关闭');
+      await openSettings();
+    } catch (e) { toast('切换失败：' + e.message); }
+  }
+  async function refreshContBadge() {
+    try {
+      const r = await fetch('/api/continuity');
+      const d = await r.json();
+      const n = (d.due || []).length;
+      const cb = $('#contBtn'); if (cb) cb.textContent = n ? ('续线 ' + n) : '续线';
+      $('#contDueLabel').textContent = n
+        ? ('有 ' + n + ' 条已到期，该推进了。')
+        : '没有到期线。';
+    } catch (e) { /* 静默 */ }
+  }
+  async function openCont() {
+    $('#contMask').classList.add('show');
+    await loadCont();
+  }
+  function closeCont() { $('#contMask').classList.remove('show'); }
+  async function openPersona() {
+    $('#personaMask').classList.add('show');
+    await refreshPersona();
+  }
+  async function refreshPersona() {
+    try {
+      const [pr, cr, rr] = await Promise.all([fetch('/api/persona'), fetch('/api/memory_candidates'), fetch('/api/relationship')]);
+      const p = await pr.json(); const c = await cr.json(); const r = await rr.json();
+      if (document.getElementById('relText')) document.getElementById('relText').textContent = '关系第 ' + (r.days || 1) + ' 天';
+      $('#personaList').innerHTML = (p.personas || []).map(s =>
+        '<div style="display:flex;gap:6px;align-items:center;margin:4px 0">' +
+        '<span style="flex:1">' + s + '</span>' +
+        (p.active === s ? '<span class="muted">当前</span>' : '<button class="ghost" data-slug="' + s + '">启用</button>') +
+        '</div>').join('') || '<div class="muted">还没有人设</div>';
+      $('#personaList').querySelectorAll('button[data-slug]').forEach(b => {
+        b.onclick = async () => {
+          const approval_token = await approvalToken('persona', 'activate:' + b.dataset.slug);
+          await fetch('/api/persona/activate', {method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({slug:b.dataset.slug, approval_token})});
+          refreshPersona();
+        };
+      });
+      $('#candList').innerHTML = (c.items || []).map(x =>
+        '<div style="display:flex;gap:6px;align-items:center;margin:4px 0">' +
+        '<span style="flex:1">' + x.title + '</span>' +
+        '<button class="ghost" data-id="' + x.id + '">收下</button>' +
+        '<button class="ghost" data-rej="' + x.id + '">忽略</button></div>').join('') ||
+        '<div class="muted">暂无候选</div>';
+      $('#candList').querySelectorAll('button[data-id]').forEach(b => {
+        b.onclick = async () => {
+          const approval_token = await approvalToken('memory', 'approve:' + b.dataset.id);
+          await fetch('/api/memory_candidates/approve', {method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({id:b.dataset.id, approval_token})});
+          refreshPersona();
+        };
+      });
+      $('#candList').querySelectorAll('button[data-rej]').forEach(b => {
+        b.onclick = async () => {
+          const approval_token = await approvalToken('memory', 'reject:' + b.dataset.rej);
+          await fetch('/api/memory_candidates/reject', {method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({id:b.dataset.rej, approval_token})});
+          refreshPersona();
+        };
+      });
+    } catch (e) { $('#personaMsg').textContent = '读取失败：' + e.message; }
+  }
+  async function importPersona() {
+    const name = $('#personaName').value.trim() || '未命名';
+    const text = $('#personaText').value.trim();
+    if (!text) return toast('先粘贴聊天记录');
+    $('#personaMsg').textContent = '蒸馏中…（LLM 模式可能要几十秒）';
+    try {
+      const approval_token = await approvalToken('persona', 'import');
+      const r = await fetch('/api/persona/import', {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name, text, use_llm:$('#personaLLM').checked, approval_token})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#personaMsg').textContent = '已生成：' + d.slug;
+      $('#personaText').value = '';
+      refreshPersona();
+    } catch (e) { $('#personaMsg').textContent = '失败：' + e.message; }
+  }
+  function closePersona() { $('#personaMask').classList.remove('show'); }
+
+
+
+
+
+  async function loadBrief() {
+    try {
+      const r = await fetch('/api/brief/latest');
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!d.text) return;
+      const box = $('#briefCard');
+      box.hidden = false;
+      box.textContent = d.text;
+    } catch (e) {}
+  }
+  async function openRoi() {
+    $('#roiMask').classList.add('show');
+    try {
+      const r = await fetch('/api/roi/dashboard');
+      const d = await r.json();
+      $('#roiSummary').innerHTML = '<b>总览</b><br>作业 ' + (d.count || 0) +
+        ' · 成功 ' + (d.success || 0) + ' · 估时 ' + (d.estimated_minutes || 0) +
+        ' 分 · 实际 ' + (d.actual_minutes || 0) + ' 分 · 省 ' + (d.saved_minutes || 0) + ' 分';
+      $('#roiList').innerHTML = (d.recent || []).map(x =>
+        '<div style="margin-bottom:4px"><span class="muted">' + escapeHtml(x.created_at || '') +
+        '</span> ' + (x.success ? '✅' : '❌') + ' ' + escapeHtml(x.workspace_id || '(未挂)') +
+        ' · 估 ' + (x.estimated_minutes || 0) + ' 分 · 实 ' +
+        (Math.round((x.actual_seconds || 0) / 60 * 10) / 10) + ' 分</div>').join('') || '暂无 ROI 记录';
+    } catch (e) { $('#roiSummary').textContent = '读取失败：' + e.message; }
+  }
+  function closeRoi() { $('#roiMask').classList.remove('show'); }
+  async function roiBackfill() {
+    try {
+      const approval_token = await approvalToken('workspace', 'backfill');
+      const r = await fetch('/api/backfill/workspace', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({approval_token})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#roiMsg').textContent = '已补挂 ' + (d.jobs || 0) + ' 个作业到 ' + (d.workspace_id || '');
+      await openRoi();
+    } catch (e) { $('#roiMsg').textContent = '补挂失败：' + e.message; }
+  }
+  async function openModels() {
+    $('#modelsMask').classList.add('show');
+    try {
+      const [r, mr] = await Promise.all([fetch('/api/model_packs'), fetch('/api/models')]);
+      const d = await r.json();
+      const md = await mr.json();
+      const cur = md.current || '';
+      $('#globalModelSelect').innerHTML = (md.options || []).filter(o => {
+        const sp = o.spec || '';
+        return sp.includes(':') && !['local_duo','local_smart','aggregator'].includes(sp.split(':')[0]);
+      }).map(o => '<option value="' + escapeHtml(o.spec) + '"' +
+        (o.spec === cur ? ' selected' : '') + '>' + escapeHtml(o.label || o.spec) + '</option>').join('');
+      $('#globalModelMsg').textContent = '当前：' + cur;
+      $('#modelsList').innerHTML = (d.items || []).map(x =>
+        '<div style="margin-bottom:5px"><b>' + escapeHtml(x.id) + '</b> ' +
+        '<span class="muted">' + escapeHtml(x.params) + ' · ' + escapeHtml(x.size_mb + 'MB') +
+        ' · ' + (x.installed ? '已安装' : '未安装') + ' · ' + escapeHtml((x.roles || []).join(',')) +
+        '</span></div>').join('') || '无模型包';
+    } catch (e) { $('#modelsList').textContent = '读取失败：' + e.message; }
+  }
+  function closeModels() { $('#modelsMask').classList.remove('show'); }
+  async function applyGlobalModel() {
+    const spec = $('#globalModelSelect').value || '';
+    if (!spec || !spec.includes(':')) return;
+    const [provider, ...rest] = spec.split(':');
+    try {
+      const r = await fetch('/api/model', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({provider, model: rest.join(':')})});
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '切换失败');
+      localStorage.setItem(MODEL_KEY, spec);
+      $('#globalModelMsg').textContent = '已切换：' + d.provider;
+      if (typeof modelSelect !== 'undefined') {
+        modelSelect.value = spec;
+        modePill.textContent = '时中 · ' + (spec.split(':')[1] || spec);
+      }
+    } catch (e) { $('#globalModelMsg').textContent = '失败：' + e.message; }
+  }
+  async function modelRoute() {
+    try {
+      const r = await fetch('/api/model_packs/route', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({text: $('#modelRouteText').value})});
+      const d = await r.json();
+      $('#modelRouteOut').textContent = JSON.stringify(d, null, 2);
+    } catch (e) { $('#modelRouteOut').textContent = '路由失败：' + e.message; }
+  }
+  let wsCurrent = '';
+  async function openWorkspaces() {
+    $('#wsMask').classList.add('show');
+    await loadWorkspaces();
+  }
+  function closeWorkspaces() { $('#wsMask').classList.remove('show'); }
+  async function loadWorkspaces() {
+    try {
+      const r = await fetch('/api/workspaces');
+      const d = await r.json();
+      const list = d.items || [];
+      $('#wsList').innerHTML = list.length ? list.map(w =>
+        '<div style="margin-bottom:5px"><a href="#" data-ws="' + escapeHtml(w.id) + '"><b>' +
+        escapeHtml(w.title || '') + '</b></a> <span class="muted">' + escapeHtml(w.status || '') +
+        ' · ' + escapeHtml(w.id || '') + '</span></div>').join('') : '暂无事情。';
+      $('#wsList').querySelectorAll('[data-ws]').forEach(a => a.onclick = (e) => { e.preventDefault(); wsOpen(a.dataset.ws); });
+    } catch (e) { $('#wsList').textContent = '读取失败：' + e.message; }
+  }
+  async function wsCreate() {
+    const title = $('#wsTitle').value.trim();
+    if (!title) return;
+    try {
+      const r = await fetch('/api/workspaces', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({title})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#wsTitle').value = '';
+      await loadWorkspaces();
+      wsOpen(d.workspace.id);
+    } catch (e) { $('#wsList').textContent = '新建失败：' + e.message; }
+  }
+  async function wsOpen(id) {
+    wsCurrent = id;
+    try {
+      const r = await fetch('/api/workspaces/' + encodeURIComponent(id));
+      const w = await r.json();
+      if (!r.ok) throw new Error(w.error || '失败');
+      const roi = w.roi || {};
+      $('#wsDetail').innerHTML = '<b>' + escapeHtml(w.title) + '</b> <span class="muted">' +
+        escapeHtml(w.status) + ' · ' + escapeHtml(w.id) + '</span><br>' +
+        '<span class="muted">ROI：作业 ' + (roi.count || 0) + ' · 成功 ' + (roi.success || 0) +
+        ' · 估时 ' + (roi.estimated_minutes || 0) + ' 分 · 实际 ' + (roi.actual_minutes || 0) +
+        ' 分 · 省 ' + (roi.saved_minutes || 0) + ' 分</span><br>' +
+        (w.items || []).map(x => '<div style="margin:3px 0"><span class="muted">[' +
+          escapeHtml(x.type) + ']</span> ' + escapeHtml(x.title || x.ref_id || '') +
+          ' <span class="muted">' + escapeHtml(x.created_at || '') + '</span></div>').join('');
+    } catch (e) { $('#wsDetail').textContent = '读取失败：' + e.message; }
+  }
+  async function wsCreateJob() {
+    if (!wsCurrent) return;
+    const title = $('#wsJobTitle').value.trim();
+    if (!title) return;
+    try {
+      const r = await fetch('/api/jobs', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({title, workspace_id: wsCurrent,
+          roi_estimate_minutes: Number($('#wsJobEstimate').value || 0)})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#wsJobTitle').value = '';
+      await wsOpen(wsCurrent);
+      toast('作业已挂，去 设置 → 高级功能 → 作业 批准');
+    } catch (e) { $('#wsDetail').textContent = '挂作业失败：' + e.message; }
+  }
+  async function wsAdd() {
+    if (!wsCurrent) return;
+    const body = $('#wsNote').value.trim();
+    if (!body) return;
+    try {
+      const r = await fetch('/api/workspaces/' + encodeURIComponent(wsCurrent) + '/items', {method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify({type:'note', title:body, body})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#wsNote').value = '';
+      await wsOpen(wsCurrent);
+    } catch (e) { $('#wsDetail').textContent = '添加失败：' + e.message; }
+  }
+  async function openAgents() {
+    $('#agentsMask').classList.add('show');
+    await loadAgents();
+  }
+  function closeAgents() { $('#agentsMask').classList.remove('show'); }
+  async function loadAgents() {
+    try {
+      const r = await fetch('/api/agents');
+      const d = await r.json();
+      const list = d.items || [];
+      $('#agentsList').innerHTML = list.length ? list.map(a =>
+        '<div style="margin-bottom:6px"><b>' + escapeHtml(a.name || '') + '</b> ' +
+        '<span class="muted">' + escapeHtml(a.id || '') + ' · owner=' + escapeHtml(a.owner || '') +
+        ' · ' + escapeHtml(a.status || '') + '</span><br><span class="muted">' +
+        escapeHtml((a.scopes || []).join(', ')) + '</span> ' +
+        (a.status === 'active' && !['system','daily','proactive','manual'].includes(a.id)
+          ? '<button class="ghost" data-agent-revoke="' + escapeHtml(a.id) + '">停用</button>' : '') +
+        '</div>').join('') : '暂无代理。';
+      $('#agentsList').querySelectorAll('[data-agent-revoke]').forEach(b => b.onclick = () => agentRevoke(b.dataset.agentRevoke));
+    } catch (e) { $('#agentsList').textContent = '读取失败：' + e.message; }
+  }
+  async function agentCreate() {
+    const name = $('#agentName').value.trim();
+    if (!name) return;
+    try {
+      const approval_token = await approvalToken('agent', 'register:' + name);
+      const r = await fetch('/api/agents', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name, owner: $('#agentOwner').value || 'Boss',
+          scopes: $('#agentScopes').value.split(',').map(x => x.trim()).filter(Boolean), approval_token})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#agentName').value = '';
+      await loadAgents();
+    } catch (e) { $('#agentsList').textContent = '注册失败：' + e.message; }
+  }
+  async function agentRevoke(id) {
+    try {
+      const approval_token = await approvalToken('agent', 'revoke:' + id);
+      const r = await fetch('/api/agents/' + encodeURIComponent(id) + '/revoke', {method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify({approval_token})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      await loadAgents();
+    } catch (e) { $('#agentsList').textContent = '停用失败：' + e.message; }
+  }
+  async function openJobs() {
+    $('#jobsMask').classList.add('show');
+    await loadJobs();
+  }
+  function closeJobs() { $('#jobsMask').classList.remove('show'); }
+  async function loadJobs() {
+    try {
+      const r = await fetch('/api/jobs');
+      const d = await r.json();
+      const list = d.items || [];
+      const w = d.worker || {};
+      if (document.getElementById('jobsWorker')) document.getElementById('jobsWorker').textContent = 'worker：' + (w.thread_alive ? '常驻中' : (w.enabled ? '未启动' : '关闭')) + ' · 扫描 ' + (w.scans || 0) + ' · 领活 ' + (w.claims || 0) + ' · 失败 ' + (w.failures || 0);
+      $('#jobsList').innerHTML = list.length ? list.map(x =>
+        '<div style="margin-bottom:8px"><b>' + escapeHtml(x.title || '') + '</b> ' +
+        '<span class="muted">[' + escapeHtml(x.status || '') + ']</span>' +
+        '<br><span class="muted">动作：' + escapeHtml(x.action_type || 'noop') +
+        ' · ' + (x.approved ? '已批准' : '未批准') + ' · hops ' + (x.hops || 0) +
+        ' · ' + escapeHtml(x.expires_at || '') + '</span> ' +
+        '<button class="ghost" data-job-view="' + x.id + '">事件</button>' +
+        (x.status === 'pending' && !x.approved ? ' <button class="ghost" data-job-approve="' + x.id + '">批准</button> <button class="ghost" data-job-reject="' + x.id + '">拒绝</button>' : '') +
+        (x.status === 'pending' ? ' <button class="ghost" data-job-start="' + x.id + '">开始</button>' : '') +
+        (x.status === 'waiting' ? ' <button class="ghost" data-job-resume="' + x.id + '">恢复</button>' : '') +
+        (x.status === 'running' ? ' <button class="ghost" data-job-finish="' + x.id + '">完成</button>' : '') +
+        '</div>'
+      ).join('') : '还没有作业。';
+      $('#jobsList').querySelectorAll('[data-job-view]').forEach(b => b.onclick = () => viewJob(b.dataset.jobView));
+      $('#jobsList').querySelectorAll('[data-job-approve]').forEach(b => b.onclick = () => jobAction(b.dataset.jobApprove, 'approve', {by:'Boss'}));
+      $('#jobsList').querySelectorAll('[data-job-reject]').forEach(b => b.onclick = () => jobAction(b.dataset.jobReject, 'reject', {by:'Boss'}));
+      $('#jobsList').querySelectorAll('[data-job-start]').forEach(b => b.onclick = () => jobAction(b.dataset.jobStart, 'start', {}));
+      $('#jobsList').querySelectorAll('[data-job-resume]').forEach(b => b.onclick = () => {
+        const answer = window.prompt('回答这个作业的等待问题：');
+        if (answer !== null) jobAction(b.dataset.jobResume, 'resume', { answer });
+      });
+      $('#jobsList').querySelectorAll('[data-job-finish]').forEach(b => b.onclick = () => jobAction(b.dataset.jobFinish, 'finish', { result: '手动完成' }));
+    } catch (e) { $('#jobsList').textContent = '读取失败：' + e.message; }
+  }
+  async function viewJob(id) {
+    try {
+      const [jr, er] = await Promise.all([
+        fetch('/api/jobs/' + encodeURIComponent(id)),
+        fetch('/api/jobs/' + encodeURIComponent(id) + '/events')
+      ]);
+      const job = await jr.json();
+      const d = await er.json();
+      const result = job.result ? ('【结果】\n' + job.result + '\n\n') : '';
+      $('#jobsEvents').textContent = result + ((d.events || []).map(e => e.at + '  ' + e.type + '  ' + JSON.stringify(e.payload)).join('\n') || '没有事件');
+    } catch (e) { $('#jobsEvents').textContent = '读取失败：' + e.message; }
+  }
+  async function jobAction(id, action, body) {
+    try {
+      const r = await fetch('/api/jobs/' + encodeURIComponent(id) + '/' + action, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      await loadJobs();
+      $('#jobsEvents').textContent = JSON.stringify(d.job || d, null, 2).slice(0, 1200);
+    } catch (e) { $('#jobsEvents').textContent = '失败：' + e.message; }
+  }
+  async function openJarvis() {
+    $('#jarMask').classList.add('show');
+    try {
+      const r = await fetch('/api/jarvis');
+      const d = await r.json();
+      $('#jarBody').textContent = d.brief || '暂无上下文';
+    } catch (e) { $('#jarBody').textContent = '读取失败：' + e.message; }
+  }
+  function closeJarvis() { $('#jarMask').classList.remove('show'); }
+  async function openPro() {
+    $('#proMask').classList.add('show');
+    await loadPro();
+  }
+  function closePro() { $('#proMask').classList.remove('show'); }
+  async function loadPro() {
+    try {
+      const r = await fetch('/api/proactive');
+      const d = await r.json();
+      const list = d.proposals || [];
+      $('#proList').innerHTML = list.length ? list.map(x =>
+        '<div style="margin-bottom:10px"><b>' + escapeHtml(x.title || '') + '</b>' +
+        '<br>建议：' + escapeHtml(x.next_step || '') +
+        '<br><span class="muted">风险：' + escapeHtml(x.risk || '') + ' · ' + escapeHtml(x.kind || '') + '</span>' +
+        ' <button class="ghost" data-pro-ok="' + escapeHtml(x.id) + '">批准执行</button>' +
+        ' <button class="ghost" data-pro-no="' + escapeHtml(x.id) + '">忽略</button></div>'
+      ).join('') : '没有到期提案。';
+      $('#proList').querySelectorAll('[data-pro-ok]').forEach(b => {
+        b.onclick = () => proAction('approve', b.dataset.proOk);
+      });
+      $('#proList').querySelectorAll('[data-pro-no]').forEach(b => {
+        b.onclick = () => proAction('reject', b.dataset.proNo);
+      });
+      const led = d.ledger || [];
+      $('#proLedger').innerHTML = led.length ? led.slice(0, 12).map(x =>
+        escapeHtml(x.at || '') + ' · ' + escapeHtml(x.kind || '') + ' · ' +
+        (x.ok ? '成功' : '失败') + ' · ' + escapeHtml(JSON.stringify(x.detail || {}).slice(0, 180))
+      ).join('<br>') : '暂无记录';
+    } catch (e) { $('#proList').textContent = '读取失败：' + e.message; }
+  }
+  async function proAction(action, id) {
+    if (action === 'approve' && !window.confirm('批准执行这一条？浏览器动作会打开页面。')) return;
+    try {
+      const r = await fetch('/api/proactive/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      const d = await r.json();
+      $('#proOut').textContent = JSON.stringify(d, null, 2).slice(0, 2000);
+      loadPro();
+    } catch (e) { $('#proOut').textContent = '执行失败：' + e.message; }
+  }
+  async function loadCont() {
+    try {
+      const r = await fetch('/api/continuity');
+      const d = await r.json();
+      const list = d.threads || [];
+      $('#contDueLabel').textContent = (d.due || []).length
+        ? '有 ' + d.due.length + ' 条已到期，该推进了。'
+        : '没有到期线。';
+      $('#contList').innerHTML = list.length ? list.map(x =>
+        '<div style="margin-bottom:8px"><b>' + escapeHtml(x.title || '') + '</b>' +
+        '<br>上次：' + escapeHtml(x.last_step || '未写') +
+        '<br>下一步：' + escapeHtml(x.next_step || '未写') +
+        ' <button class="ghost" data-continue="' + escapeHtml(x.id) + '">继续</button>' +
+        ' <button class="ghost" data-contclose="' + escapeHtml(x.id) + '">完成</button></div>'
+      ).join('') : '还没有未完成的线。';
+      $('#contList').querySelectorAll('[data-continue]').forEach(b => {
+        b.onclick = () => {
+          const x = list.find(t => t.id === b.dataset.continue);
+          if (!x) return;
+          inputEl.value = x.next_step || x.title;
+          autoGrow(); closeCont(); inputEl.focus();
+        };
+      });
+      $('#contList').querySelectorAll('[data-contclose]').forEach(b => {
+        b.onclick = async () => {
+          await fetch('/api/continuity/close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.dataset.contclose }) });
+          loadCont();
+        };
+      });
+    } catch (e) { $('#contList').textContent = '续线读取失败：' + e.message; }
+  }
+  async function saveCont() {
+    try {
+      const r = await fetch('/api/continuity/save', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: $('#contTitle').value, next_step: $('#contNext').value,
+          last_step: $('#contLast').value, evidence: $('#contEvidence').value, due: $('#contDue').value }) });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '保存失败');
+      $('#contTitle').value = ''; $('#contNext').value = ''; $('#contLast').value = ''; $('#contEvidence').value = '';
+      $('#contOut').textContent = '已记住：' + (d.thread?.title || '');
+      loadCont();
+    } catch (e) { $('#contOut').textContent = '保存失败：' + e.message; }
+  }
+
+  function openCap() {
+    $('#capMask').classList.add('show');
+    refreshCap();
+  }
+  function closeCap() { $('#capMask').classList.remove('show'); }
+  async function refreshCap() {
+    try {
+      const sr = await fetch('/api/skills');
+      const sd = await sr.json();
+      const skills = sd.skills || [];
+      $('#skillList').innerHTML = skills.length ? skills.map(s =>
+        '<div>' + escapeHtml(s.name || '') + ' · ' + escapeHtml(s.status || '') +
+        (s.status !== 'approved' ? ' <button class="ghost" data-skill="' + escapeHtml(s.name || '') + '">批准</button>' : '') +
+        '</div>').join('') : '没有技能';
+      $('#skillList').querySelectorAll('[data-skill]').forEach(b => {
+        b.onclick = async () => {
+          await fetch('/api/skills/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: b.dataset.skill }) });
+          refreshCap();
+        };
+      });
+    } catch (e) { $('#skillList').textContent = '技能读取失败：' + e.message; }
+    try {
+      const mr = await fetch('/api/mcp/servers');
+      const md = await mr.json();
+      const servers = md.servers || [];
+      $('#mcpList').innerHTML = servers.length ? servers.map(s =>
+        '<div>' + escapeHtml(s.name || '') + ' <button class="ghost" data-mcp="' + escapeHtml(s.name || '') + '">列工具</button></div>').join('') : '没有 MCP 服务';
+      $('#mcpList').querySelectorAll('[data-mcp]').forEach(b => {
+        b.onclick = () => listMcpTools(b.dataset.mcp);
+      });
+    } catch (e) { $('#mcpList').textContent = 'MCP 读取失败：' + e.message; }
+  }
+
+  async function listMcpTools(server) {
+    try {
+      const r = await fetch('/api/mcp/tools', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ server }) });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '列工具失败');
+      const sel = $('#mcpTool');
+      sel.innerHTML = '';
+      (d.tools || []).forEach(t => {
+        const o = document.createElement('option');
+        o.value = server + '|' + t.name;
+        o.textContent = server + ' · ' + (t.description || t.name);
+        sel.appendChild(o);
+      });
+      $('#capOut').textContent = '已加载 ' + (d.tools || []).length + ' 个 MCP 工具；调用前会确认。';
+    } catch (e) { $('#capOut').textContent = '列工具失败：' + e.message; }
+  }
+
+  async function approvalToken(kind, detail) {
+    try {
+      const r = await fetch('/api/approval/request', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({kind, detail: detail || ''})});
+      const d = await r.json();
+      return r.ok ? (d.token || '') : '';
+    } catch (e) { return ''; }
+  }
+  async function browserRun() {
+    let actions;
+    try { actions = JSON.parse($('#browserActions').value || '[]'); }
+    catch (e) { return toast('动作不是合法 JSON'); }
+    if (!window.confirm('批准执行浏览器任务？')) return;
+    $('#capOut').textContent = '浏览器任务执行中…';
+    try {
+      const approval_token = await approvalToken('browser', $('#browserUrl').value);
+      const r = await fetch('/api/browser/task', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: $('#browserUrl').value, actions, confirm: true, headless: false, approval_token }) });
+      const d = await r.json();
+      $('#capOut').textContent = d.ok
+        ? ('标题：' + d.title + '\nURL：' + d.url + '\n\n' + (d.text || '').slice(0, 3000) + '\n\n截图：' + d.screenshot)
+        : ('失败：' + (d.reason || ''));
+    } catch (e) { $('#capOut').textContent = '浏览器任务失败：' + e.message; }
+  }
+  async function browserLogin() {
+    if (!window.confirm('打开持久登录窗口？登录完直接关闭窗口即可。')) return;
+    try {
+      const approval_token = await approvalToken('login', 'browser-login');
+      const r = await fetch('/api/browser/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: $('#browserUrl').value || 'https://www.douyin.com/', confirm: true, approval_token }) });
+      const d = await r.json();
+      $('#capOut').textContent = d.ok ? ('登录窗口已打开，pid=' + d.pid + '\n' + (d.note || '')) : ('打开失败：' + (d.reason || ''));
+    } catch (e) { $('#capOut').textContent = '打开登录窗口失败：' + e.message; }
+  }
+  async function desktopList() {
+    try {
+      const r = await fetch('/api/desktop/windows');
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.reason || '列窗口失败');
+      const sel = $('#desktopWin');
+      sel.innerHTML = '';
+      (d.windows || []).forEach(w => {
+        const o = document.createElement('option');
+        o.value = w.title; o.textContent = w.title;
+        sel.appendChild(o);
+      });
+      $('#capOut').textContent = '已列出 ' + (d.windows || []).length + ' 个窗口。';
+    } catch (e) { $('#capOut').textContent = '列窗口失败：' + e.message; }
+  }
+  async function desktopAction(kind) {
+    const title = $('#desktopWin').value;
+    if (!title) return toast('先列桌面窗口');
+    if (!window.confirm('批准桌面动作 ' + kind + '：' + title + ' ?')) return;
+    try {
+      const approval_token = await approvalToken('desktop', kind + ':' + title);
+      const r = await fetch('/api/desktop/action', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, title, text: $('#desktopText').value, confirm: true, approval_token }) });
+      const d = await r.json();
+      $('#capOut').textContent = JSON.stringify(d, null, 2);
+    } catch (e) { $('#capOut').textContent = '桌面动作失败：' + e.message; }
+  }
+  async function mcpCall() {
+    const [server, tool] = ($('#mcpTool').value || '').split('|');
+    if (!server || !tool) return toast('先列 MCP 工具');
+    let args;
+    try { args = JSON.parse($('#mcpArgs').value || '{}'); }
+    catch (e) { return toast('参数不是合法 JSON'); }
+    if (!window.confirm('批准调用 MCP 工具 ' + server + ' / ' + tool + ' ?')) return;
+    try {
+      const approval_token = await approvalToken('mcp', server + '/' + tool);
+      const r = await fetch('/api/mcp/call', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ server, tool, args, confirm: true, approval_token }) });
+      const d = await r.json();
+      $('#capOut').textContent = JSON.stringify(d, null, 2);
+    } catch (e) { $('#capOut').textContent = 'MCP 调用失败：' + e.message; }
+  }
+  async function openWrite() {
+    $('#writeMask').classList.add('show');
+    try {
+      const r = await fetch('/api/writing/style');
+      const d = await r.json();
+      const s = d.style || {};
+      $('#writeStyleName').value = s.name || '';
+      $('#writeStyleNotes').value = s.notes || '';
+      if (s.tone && !$('#writeTone').value) $('#writeTone').value = s.tone;
+      $('#writeStyleState').textContent = s.name || s.tone
+        ? ('当前风格：' + (s.name || '未命名') + ' · 样例 ' + (s.samples || []).length + ' 条')
+        : '还没有长期风格。';
+    } catch (e) { $('#writeStyleState').textContent = '风格读取失败'; }
+  }
+  function closeWrite() { $('#writeMask').classList.remove('show'); }
+  async function styleAction(action, body) {
+    const r = await fetch('/api/writing/style/' + action, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || '失败');
+    return d.style;
+  }
+  async function saveStyle() {
+    try {
+      await styleAction('save', {
+        name: $('#writeStyleName').value, tone: $('#writeTone').value,
+        notes: $('#writeStyleNotes').value
+      });
+      toast('风格已保存');
+      openWrite();
+    } catch (e) { toast('保存失败：' + e.message); }
+  }
+  async function learnStyle() {
+    const text = $('#writeOut').textContent || '';
+    try {
+      await styleAction('sample', { text });
+      toast('已加入风格样例');
+      openWrite();
+    } catch (e) { toast('学习失败：' + e.message); }
+  }
+  async function clearStyle() {
+    if (!window.confirm('清空长期写作风格？')) return;
+    try { await styleAction('clear', {}); toast('已清空'); openWrite(); }
+    catch (e) { toast('清空失败：' + e.message); }
+  }
+  async function writeGenerate() {
+    $('#writeState').textContent = '生成中…';
+    $('#writeOut').textContent = '本地模型生成需要一些时间，请稍等。';
+    try {
+      const r = await fetch('/api/writing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task: $('#writeTask').value, topic: $('#writeTopic').value,
+          audience: $('#writeAudience').value, tone: $('#writeTone').value,
+          length: $('#writeLength').value, material: $('#writeMaterial').value
+        })
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '生成失败');
+      $('#writeOut').textContent = d.response || '（没有返回）';
+      $('#writeState').textContent = '已完成';
+    } catch (e) {
+      $('#writeOut').textContent = '生成失败：' + e.message;
+      $('#writeState').textContent = '失败';
+    }
+  }
+  async function writeCopy() {
+    const text = $('#writeOut').textContent || '';
+    if (!text) return toast('还没有结果');
+    await copyMessage(text);
+  }
+  async function codeCall(action, body) {
+    const payload = Object.assign({}, body || {});
+    if (action === 'test' || action === 'apply') {
+      payload.approval_token = await approvalToken('code', action);
+    }
+    const r = await fetch('/api/code/' + action, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || '请求失败');
+    return d;
+  }
+  function openCode() { $('#codeMask').classList.add('show'); }
+  function closeCode() { $('#codeMask').classList.remove('show'); }
+  async function codeBatchApply() {
+    let changes;
+    try { changes = JSON.parse($('#codeBatchText').value || '[]'); }
+    catch (e) { $('#codeBatchMsg').textContent = 'JSON 格式错误'; return; }
+    if (!Array.isArray(changes) || !changes.length) { $('#codeBatchMsg').textContent = 'changes 不能为空'; return; }
+    try {
+      const token = await approvalToken('code', 'apply_batch');
+      const r = await fetch('/api/code/apply_batch', {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({root:$('#codeRoot').value, changes, confirm:true, approval_token:token})});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || '失败');
+      $('#codeBatchMsg').textContent = '已应用 ' + (d.count || 0) + ' 个文件';
+      $('#codeOut').textContent = (d.items || []).map(x => x.path + (x.changed ? ' · 已改' : ' · 无变化')).join('\n');
+    } catch (e) { $('#codeBatchMsg').textContent = '失败：' + e.message; }
+  }
+  async function codeBatchRollback() {
+    try {
+      const token = await approvalToken('code', 'rollback');
+      const r = await fetch('/api/code/rollback', {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({root:$('#codeRoot').value, path:$('#codePath').value, approval_token:token})});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || '失败');
+      $('#codeBatchMsg').textContent = '已回滚 ' + (d.path || '');
+    } catch (e) { $('#codeBatchMsg').textContent = '失败：' + e.message; }
+  }
+  async function codeLoad() {
+    try {
+      const d = await codeCall('read', { root: $('#codeRoot').value, path: $('#codePath').value });
+      codeSha = d.sha256;
+      $('#codeText').value = d.content;
+      $('#codeSha').textContent = 'sha ' + d.sha256.slice(0, 12);
+      $('#codeOut').textContent = '已读取 ' + d.path;
+    } catch (e) { $('#codeOut').textContent = '读取失败：' + e.message; }
+  }
+  async function codeTest() {
+    try {
+      const d = await codeCall('test', { root: $('#codeRoot').value, command: $('#codeCmd').value });
+      $('#codeOut').textContent = '测试' + (d.passed ? '通过' : '失败') +
+        '（exit ' + d.code + '）\n\n' + (d.output || '');
+      return d.passed;
+    } catch (e) {
+      $('#codeOut').textContent = '测试失败：' + e.message;
+      return false;
+    }
+  }
+  async function codeSave() {
+    if (!window.confirm('确认写入 ' + $('#codePath').value + ' ?')) return;
+    try {
+      const d = await codeCall('apply', {
+        root: $('#codeRoot').value, path: $('#codePath').value,
+        content: $('#codeText').value, expected_sha: codeSha, confirm: true
+      });
+      codeSha = d.sha256;
+      $('#codeSha').textContent = 'sha ' + d.sha256.slice(0, 12);
+      $('#codeOut').textContent = (d.changed ? '已写入，备份：' + (d.backup || '') : '内容未变化') +
+        '\n\n' + (d.diff || '') + '\n\n开始跑测试…';
+      await codeTest();
+    } catch (e) { $('#codeOut').textContent = '保存失败：' + e.message; }
+  }
+
+  function exportSession() {
+    const s = active();
+    if (!s || !s.messages.length) return toast('当前会话没有内容');
+    const lines = ['# ' + (s.title || '知衡对话'), ''];
+    for (const m of s.messages) {
+      lines.push('## ' + (m.role === 'user' ? '你' : '时中'));
+      lines.push('');
+      if (m.reasoning) {
+        lines.push('> 思考过程：' + String(m.reasoning).replace(/\n/g, '\n> '));
+        lines.push('');
+      }
+      lines.push(String(m.content || ''));
+      lines.push('');
+    }
+    const name = String(s.title || '知衡对话').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40) || '知衡对话';
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name + '.md';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('已导出 Markdown');
+  }
+
+  // events
+  loadBrief();
+  $('#newChat').onclick = newSession;
+  $('#regen').onclick = regenerate;
+  $('#exportBtn').onclick = exportSession;
+  $('#settingsBtn').onclick = openSettings;
+  const moreMenu = $('#moreMenu');
+  const closeMore = () => moreMenu.classList.remove('show');
+
+  function applyTheme(t) {
+    const dark = t === 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'warm';
+    localStorage.setItem('luwu_theme', dark ? 'dark' : 'warm');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#121417' : '#f3eee4');
+    const b = document.getElementById('themeBtn');
+    if (b) b.textContent = dark ? '主题：深色' : '主题：暖白';
+  }
+  const themeBtn = document.getElementById('themeBtn');
+  if (themeBtn) themeBtn.onclick = () => {
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'warm' : 'dark');
+    moreMenu.classList.remove('show');
+  };
+  applyTheme(localStorage.getItem('luwu_theme') || 'warm');
+
+  $('#moreBtn').onclick = (e) => {
+    e.stopPropagation();
+    moreMenu.classList.toggle('show');
+  };
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.more-wrap')) closeMore();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMore(); });
+  moreMenu.querySelectorAll('button').forEach(b =>
+    b.addEventListener('click', () => closeMore()));
+  $('#settingsClose').onclick = closeSettings;
+  $('#settingsMask').onclick = (e) => { if (e.target.id === 'settingsMask') closeSettings(); };
+  $('#autostartBtn').onclick = toggleStartup;
+  $('#backupNow').onclick = backupNow;
+  loadOnboarding();
+  $('#adminBtn').onclick = () => { closeSettings(); openAdmin(); };
+  $('#adminClose').onclick = () => $('#adminMask').classList.remove('show');
+  $('#modelPullBtn').onclick = pullModel;
+  $('#modelTest').onclick = testCustom;
+  $('#modelSave').onclick = saveCustom;
+  $('#modelProvider').onchange = applyModelPreset;
+  $('#onboardStart').onclick = finishOnboarding;
+  $('#onboardLater').onclick = finishOnboarding;
+  loadNetwork();
+  $('#networkBtn').onclick = toggleNetwork;
+  loadStartup();
+  loadBackup();
+  $('#codeClose').onclick = closeCode;
+  $('#codeMask').onclick = (e) => { if (e.target.id === 'codeMask') closeCode(); };
+  $('#codeLoad').onclick = codeLoad;
+  $('#codeTest').onclick = codeTest;
+  $('#codeSave').onclick = codeSave;
+  $('#contClose').onclick = closeCont;
+  $('#contMask').onclick = (e) => { if (e.target.id === 'contMask') closeCont(); };
+  $('#contSave').onclick = saveCont;
+  $('#proClose').onclick = closePro;
+  $('#proMask').onclick = (e) => { if (e.target.id === 'proMask') closePro(); };
+  $('#jarClose').onclick = closeJarvis;
+  $('#jarMask').onclick = (e) => { if (e.target.id === 'jarMask') closeJarvis(); };
+  $('#jarRefresh').onclick = openJarvis;
+  $('#jarPush').onclick = () => { closeJarvis(); openPro(); };
+  $('#roiClose').onclick = closeRoi;
+  $('#roiMask').onclick = (e) => { if (e.target.id === 'roiMask') closeRoi(); };
+  $('#roiBackfill').onclick = roiBackfill;
+  $('#modelsClose').onclick = closeModels;
+  $('#globalModelApply').onclick = applyGlobalModel;
+  $('#modelsMask').onclick = (e) => { if (e.target.id === 'modelsMask') closeModels(); };
+  $('#modelRouteBtn').onclick = modelRoute;
+  $('#wsClose').onclick = closeWorkspaces;
+  $('#wsMask').onclick = (e) => { if (e.target.id === 'wsMask') closeWorkspaces(); };
+  $('#wsCreate').onclick = wsCreate;
+  $('#wsAdd').onclick = wsAdd;
+  $('#wsJobCreate').onclick = wsCreateJob;
+  function advOpen(fn) { closeSettings(); fn(); }
+  $('#agentsClose').onclick = closeAgents;
+  $('#agentsMask').onclick = (e) => { if (e.target.id === 'agentsMask') closeAgents(); };
+  $('#agentCreate').onclick = agentCreate;
+  $('#jobsClose').onclick = closeJobs;
+  $('#jobsMask').onclick = (e) => { if (e.target.id === 'jobsMask') closeJobs(); };
+  $('#jobsRefresh').onclick = loadJobs;
+  $('#jobsRun').onclick = async () => {
+    try {
+      const r = await fetch('/api/jobs/worker/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({confirm:true})});
+      const d = await r.json();
+      $('#jobsEvents').textContent = JSON.stringify(d, null, 2).slice(0, 2400);
+      await loadJobs();
+    } catch (e) { $('#jobsEvents').textContent = '执行失败：' + e.message; }
+  };
+  $('#jobsDry').onclick = async () => {
+    try {
+      const r = await fetch('/api/jobs/worker/dry-run', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+      const d = await r.json();
+      $('#jobsEvents').textContent = JSON.stringify(d, null, 2).slice(0, 2400);
+      await loadJobs();
+    } catch (e) { $('#jobsEvents').textContent = 'dry-run 失败：' + e.message; }
+  };
+  $('#jobsAdd').onclick = async () => {
+    const title = window.prompt('作业标题：');
+    if (!title) return;
+    try {
+      const r = await fetch('/api/jobs', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      await loadJobs();
+    } catch (e) { $('#jobsEvents').textContent = '创建失败：' + e.message; }
+  };
+  $('#personaClose').onclick = closePersona;
+  $('#personaMask').onclick = (e) => { if (e.target.id === 'personaMask') closePersona(); };
+  $('#personaImport').onclick = importPersona;
+  $('#personaRefresh').onclick = refreshPersona;
+  $('#gradBtn').onclick = async () => {
+    try {
+      const approval_token = await approvalToken('persona', 'graduation');
+      const r = await fetch('/api/graduation', {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({approval_token})});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '失败');
+      $('#personaMsg').textContent = '告别信已写入：' + d.path;
+      refreshPersona();
+    } catch (e) { $('#personaMsg').textContent = '失败：' + e.message; }
+  };
+  $('#capClose').onclick = closeCap;
+  $('#capMask').onclick = (e) => { if (e.target.id === 'capMask') closeCap(); };
+  $('#skillRefresh').onclick = refreshCap;
+  $('#mcpRefresh').onclick = refreshCap;
+  $('#mcpCall').onclick = mcpCall;
+  $('#browserRun').onclick = browserRun;
+  $('#browserLogin').onclick = browserLogin;
+  refreshContBadge();
+  setInterval(refreshContBadge, 60000);
+  $('#desktopList').onclick = desktopList;
+  $('#desktopFocus').onclick = () => desktopAction('focus');
+  $('#desktopType').onclick = () => desktopAction('type');
+  $('#writeClose').onclick = closeWrite;
+  $('#writeMask').onclick = (e) => { if (e.target.id === 'writeMask') closeWrite(); };
+  $('#writeGo').onclick = writeGenerate;
+  $('#writeCopy').onclick = writeCopy;
+  $('#writeStyleSave').onclick = saveStyle;
+  $('#writeStyleLearn').onclick = learnStyle;
+  $('#writeStyleClear').onclick = clearStyle;
+  $('#sessionSearch').oninput = (e) => { sessionQuery = e.target.value || ''; renderSessions(); };
+  $('#quoteCancel').onclick = clearQuote;
+  $('#attachBtn').onclick = () => $('#fileInput').click();
+  const voiceBtn = $('#voiceBtn');
+  voiceBtn.onpointerdown = async (e) => { e.preventDefault(); if (!recording) await startVoice(); };
+  voiceBtn.onpointerup = (e) => { e.preventDefault(); if (recording) stopVoice(); };
+  voiceBtn.onpointerleave = () => { if (recording) stopVoice(); };
+  voiceBtn.onpointercancel = () => { if (recording) stopVoice(); };
+  voiceBtn.onclick = (e) => e.preventDefault();
+  $('#streamVoiceBtn').onclick = () => streamAsrOn ? stopStreamAsr() : startStreamAsr();
+  $('#meetingBtn').onclick = () => streamAsrOn ? stopStreamAsr() : startStreamAsr(true);
+  $('#ttsBtn').onclick = toggleTts;
+  $('#streamBtn').onclick = streamToggle;
+  refreshTts();
+  $('#searchBtn').onclick = () => {
+    if (offlineMode) {
+      localSearchOn = !localSearchOn;
+      const b = $('#searchBtn');
+      b.classList.toggle('search-on', localSearchOn);
+      b.textContent = localSearchOn ? '本地：开' : '本地';
+      return;
+    }
+    webOn = !webOn;
+    const b = $('#searchBtn');
+    b.classList.toggle('search-on', webOn);
+    b.textContent = webOn ? '本次联网：开' : '本次联网';
+  };
+  $('#fileInput').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
+  sendBtn.onclick = () => send();
+  stopBtn.onclick = stop;
+  inputEl.addEventListener('input', autoGrow);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('[data-copy]')) {
+      const code = e.target.parentElement.querySelector('code');
+      navigator.clipboard.writeText(code ? code.textContent : '').then(() => {
+        e.target.textContent = '已复制'; setTimeout(() => e.target.textContent = '复制', 1200);
+      }).catch(() => toast('复制失败'));
+    }
+    const chip = e.target.closest('[data-q]');
+    if (chip) send(chip.dataset.q);
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); newSession(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'r' && !e.shiftKey) { e.preventDefault(); regenerate(); }
+  });
+
+  const SCENARIOS = [
+    ['low', '免费本地'], ['balanced', '本地增强'],
+    ['hybrid', '混合 · 本地优先/API兜底'], ['cloud', 'API 模式']
+  ];
+  async function loadScenarios() {
+    try {
+      const [r, c, cur] = await Promise.all([
+        fetch('/api/settings/model_mode'),
+        fetch('/api/custom_models'),
+        fetch('/api/settings/custom_model')
+      ]);
+      const d = await r.json(), cd = await c.json(), cu = await cur.json();
+      modelSelect.innerHTML = '';
+      for (const [key, label] of SCENARIOS) {
+        const op = document.createElement('option'); op.value = key; op.textContent = label;
+        modelSelect.appendChild(op);
+      }
+      for (const m of (cd.items || [])) {
+        const op = document.createElement('option');
+        op.value = 'custom:' + m.name;
+        op.textContent = '模型 · ' + (m.label || m.name);
+        modelSelect.appendChild(op);
+      }
+      if (cu.name) modelSelect.value = 'custom:' + cu.name;
+      else modelSelect.value = d.mode || 'balanced';
+      modePill.textContent = '时中 · ' + (modelSelect.options[modelSelect.selectedIndex]?.textContent || '标准');
+      modelSelect.onchange = async () => {
+        try {
+          const v = modelSelect.value;
+          const rr = await fetch(v.startsWith('custom:') ? '/api/settings/custom_model' : '/api/settings/model_mode', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(v.startsWith('custom:') ? {name: v.slice(7)} : {mode: v})
+          });
+          const dd = await rr.json();
+          if (!rr.ok) throw new Error(dd.error || '失败');
+          modePill.textContent = '时中 · ' + modelSelect.options[modelSelect.selectedIndex].textContent;
+          toast('已切换');
+        } catch (e) { toast('切换失败：' + e.message); }
+      };
+    } catch (e) { toast('场景读取失败'); }
+  }
+
+  loadScenarios();
+
+  fetch('/api/settings').then(r => r.json()).then(d => {
+    offlineMode = !!d.offline;
+    if (offlineMode) {
+      const b = $('#searchBtn');
+      b.textContent = '本次本地';
+      b.title = '离线模式：查本机记忆';
+    }
+  }).catch(() => {});
+
+  fetch('/api/health').then(r => r.json()).then(d => {
+    modelMeta.textContent = '在线 · ' + (d.model || 'mock');
+  }).catch(() => { modelMeta.textContent = '后端未连接'; });
+
+  renderAll();
+  pullServer();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 成本/延迟</title>
+<style>body{margin:0;background:#f5f2ec;color:#2a2722;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}main{max-width:980px;margin:0 auto;padding:24px}h1{font-size:18px;margin:0 0 4px}p{color:#80776a;font-size:12px;margin:0 0 16px}.cards{display:flex;gap:10px;flex-wrap:wrap}.card{background:#fff;border:1px solid #d9d1c2;border-radius:10px;padding:10px 14px;min-width:140px}.card b{display:block;font-size:20px}.muted{color:#80776a;font-size:12px}table{width:100%;border-collapse:collapse;background:#fff;margin-top:16px;border:1px solid #d9d1c2}th,td{padding:7px;border-bottom:1px solid #eee;font-size:12px;text-align:left}th{background:#f0ece4}</style></head>
+<body><main><h1>成本 / 延迟</h1><p>本地台账，只统计元数据，不记正文。</p><div class="cards" id="cards"></div><table><thead><tr><th>时间</th><th>模型</th><th>延迟(s)</th><th>tokens</th><th>成本</th></tr></thead><tbody id="rows"></tbody></table></main>
+<script>
+fetch('/api/usage/panel').then(r=>r.json()).then(d=>{
+ const t=d.today||{}, m=d.summary||{};
+ document.querySelector('#cards').innerHTML=[['今日请求',t.requests||0],['今日成本',(t.cost||0).toFixed(4)],['近200次成本',(m.cost||0).toFixed(4)],['平均延迟',(m.avg_latency||0)+'s']].map(x=>'<div class="card"><span class="muted">'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+ const rows=m.recent||[]; document.querySelector('#rows').innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(x.at)+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.latency)+'</td><td>'+esc(x.tokens)+'</td><td>'+esc(x.cost)+'</td></tr>').join(''):'<tr><td colspan="5" class="muted">暂无记录</td></tr>';
+}).catch(e=>{document.querySelector('#cards').textContent='读取失败：'+e.message});
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+</script></body></html>

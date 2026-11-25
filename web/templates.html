@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 模板市场</title>
+<style>body{margin:0;background:#f5f2ec;color:#2a2722;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}main{max-width:1000px;margin:0 auto;padding:24px}h1{font-size:18px;margin:0 0 4px}p{color:#80776a;font-size:12px;margin:0 0 16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.card{background:#fff;border:1px solid #d9d1c2;border-radius:10px;padding:14px}.card b{display:block;margin-bottom:4px}.card .muted{font-size:12px}.card button{margin-top:10px;border:1px solid #8a5a2b;background:#fff;color:#8a5a2b;border-radius:8px;padding:6px 10px;cursor:pointer}</style></head>
+<body><main><h1>模板市场</h1><p>本机模板；点按钮复制对应对话命令，回聊天里执行。</p><div class="grid" id="grid"></div></main>
+<script>
+const items=[['周报','本周目标 / 进展 / 问题 / 下周计划','模板：周报 本周周报'],['会议','时间 / 参会人 / 议题 / 结论 / 待办','模板：会议 项目评审'],['预算','项目 / 预算 / 实际 / 差异 / 备注','模板：预算 十一月预算'],['项目计划','目标 / 范围 / 里程碑 / 负责人 / 风险','模板：项目计划 项目A'],['报价单','项目 / 数量 / 单价 / 金额 / 备注','模板：报价单 报价单A'],['合同','甲方 / 乙方 / 标的 / 金额 / 期限 / 违约 / 签署','模板：合同 合同A'],['发票','项目 / 数量 / 单价 / 金额 / 税率 / 税额','模板：发票 发票A'],['复盘','目标 / 结果 / 差距 / 原因 / 改进','模板：复盘 复盘A'],['OKR','目标 / 关键结果 / 目标值 / 当前值 / 进度','模板：OKR OKR-A']];
+document.querySelector('#grid').innerHTML=items.map(x=>'<div class="card"><b>'+x[0]+'</b><div class="muted">'+x[1]+'</div><button data-cmd="'+x[2]+'">复制命令</button></div>').join('');
+document.querySelectorAll('button[data-cmd]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cmd);b.textContent='已复制';}catch(e){b.textContent=b.dataset.cmd;}});
+</script></body></html>

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "name_basic",
+    "text": "我叫陈惠锋",
+    "expect": [{"kind": "entity", "type": "person", "name": "陈惠锋"}]
+  },
+  {
+    "id": "name_shi",
+    "text": "我是阿明",
+    "expect": [{"kind": "entity", "type": "person", "name": "阿明"}]
+  },
+  {
+    "id": "wife",
+    "text": "我的妻子是李四",
+    "expect": [
+      {"kind": "entity", "type": "person", "name": "李四"},
+      {"kind": "relation", "subject": "用户", "predicate": "妻子", "object": "李四"}
+    ]
+  },
+  {
+    "id": "colleague",
+    "text": "我的同事是阿明",
+    "expect": [
+      {"kind": "entity", "type": "person", "name": "阿明"},
+      {"kind": "relation", "subject": "用户", "predicate": "同事", "object": "阿明"}
+    ]
+  },
+  {
+    "id": "work",
+    "text": "我在东宝床垫工作",
+    "expect": [{"kind": "entity", "type": "org", "name": "东宝床垫"}]
+  },
+  {
+    "id": "like",
+    "text": "我喜欢喝茶",
+    "expect": [{"kind": "belief", "holder": "user", "predicate": "喜欢", "value": "喝茶"}]
+  },
+  {
+    "id": "question_name",
+    "text": "你还记得我叫什么吗",
+    "expect": []
+  },
+  {
+    "id": "question_name2",
+    "text": "我叫什么名字",
+    "expect": []
+  },
+  {
+    "id": "combo",
+    "text": "我叫陈惠锋，我在东宝床垫工作，我喜欢喝茶",
+    "expect": [
+      {"kind": "entity", "type": "person", "name": "陈惠锋"},
+      {"kind": "entity", "type": "org", "name": "东宝床垫"},
+      {"kind": "belief", "holder": "user", "predicate": "喜欢", "value": "喝茶"}
+    ]
+  },
+  {
+    "id": "wife_extra",
+    "text": "我叫阿明，我的妻子是李四，她是老师",
+    "expect": [
+      {"kind": "entity", "type": "person", "name": "阿明"},
+      {"kind": "entity", "type": "person", "name": "李四"},
+      {"kind": "relation", "subject": "用户", "predicate": "妻子", "object": "李四"}
+    ]
+  }
+]

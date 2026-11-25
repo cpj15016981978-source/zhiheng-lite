@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 规划</title>
+<style>body{margin:0;background:#f5f2ec;color:#2a2722;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}main{max-width:980px;margin:0 auto;padding:24px}h1{font-size:18px;margin:0 0 4px}p{color:#80776a;font-size:12px;margin:0 0 16px}.plan{background:#fff;border:1px solid #d9d1c2;border-radius:10px;padding:12px;margin:10px 0}.step{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid #eee;font-size:12px}.step b{width:26px}.step .st{color:#80776a}.step .res{white-space:pre-wrap;font-size:11px;color:#555;margin-left:4px}.muted{color:#80776a;font-size:12px}button{border:1px solid #8a5a2b;background:#fff;color:#8a5a2b;border-radius:8px;padding:6px 10px;cursor:pointer}</style></head>
+<body><main><h1>规划</h1><p>一步一步执行；每步有依赖，上一完成才允许下一步。</p><div id="list">加载中…</div></main>
+<script>
+async function load(){const r=await fetch('/api/plans');const d=await r.json();const items=d.items||[];document.querySelector('#list').innerHTML=items.length?items.map((x,i)=>{const p=x.plan,j=x.jobs||[];return '<div class="plan"><b>'+esc(p.goal)+'</b> <span class="muted">['+esc(p.status)+']</span><div>'+j.map((job,k)=>'<div class="step"><b>'+(k+1)+'</b><span class="st">['+esc(job.status)+']</span><span>'+esc(job.title)+'</span></div>').join('')+'</div><button data-step="'+esc(p.id)+'">执行下一步</button></div>'}).join(''):'<p class="muted">暂无规划</p>';document.querySelectorAll('button[data-step]').forEach(b=>b.onclick=async()=>{const r=await fetch('/api/plans/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.step})});const d=await r.json();if(!r.ok)alert(d.error||'失败');load();});}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+load();
+</script></body></html>

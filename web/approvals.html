@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 待审批</title>
+<style>body{margin:0;background:#f5f2ec;color:#2a2722;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}main{max-width:900px;margin:0 auto;padding:24px}h1{font-size:18px;margin:0 0 6px}p{color:#80776a;font-size:12px;margin:0 0 16px}.item{background:#fff;border:1px solid #d9d1c2;border-radius:10px;padding:12px;margin:8px 0;display:flex;gap:12px;align-items:center;justify-content:space-between}.muted{color:#80776a;font-size:12px}button{border:1px solid #8a5a2b;background:#fff;color:#8a5a2b;border-radius:8px;padding:6px 12px;cursor:pointer}</style></head>
+<body><main><h1>待审批</h1><p>高风险动作未批准时列在这里；一次性 token 默认 120 秒过期。</p><div id="list">加载中…</div></main>
+<script>
+fetch('/api/approvals/local').then(r=>r.json()).then(d=>{
+ const box=document.querySelector('#list'); const items=d.items||[];
+ box.innerHTML=items.length?items.map(x=>'<div class="item"><div><b>'+esc(x.kind)+'</b><div class="muted">'+esc(x.detail)+' · 到期 '+new Date(x.expires*1000).toLocaleTimeString()+'</div></div><button data-run="'+esc(x.id)+'" '+(x.can_execute?'':'disabled')+'>'+(x.can_execute?'批准并执行':'批准')+'</button> <button data-ok="'+esc(x.id)+'">只发 token</button> <button data-id="'+esc(x.id)+'">拒绝</button></div>').join(''):'<p class="muted">没有待审批。</p>';
+ box.querySelectorAll('button[data-run]').forEach(b=>b.onclick=async()=>{if(b.disabled)return;const r=await fetch('/api/approvals/execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.run})});const d=await r.json();alert(d.ok?'已执行':('执行失败：'+(d.error||d.reason||'未知')));location.reload();});
+ box.querySelectorAll('button[data-ok]').forEach(b=>b.onclick=async()=>{const r=await fetch('/api/approvals/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.ok})});const d=await r.json();if(d.token){await navigator.clipboard.writeText(d.token).catch(()=>{});alert('已批准，token 已复制；执行动作时带上它。')}else{alert('没有找到这条审批')}});
+ box.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{await fetch('/api/approvals/deny',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.id})});location.reload();});
+}).catch(e=>{document.querySelector('#list').textContent='读取失败：'+e.message});
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+</script></body></html>

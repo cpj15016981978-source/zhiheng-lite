@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 审计账</title>
+<style>
+body{margin:0;background:#f5f2ec;color:#2a2722;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px}h1{font-size:18px;margin:0 0 6px}
+p{color:#80776a;font-size:12px;margin:0 0 16px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d9d1c2}
+th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:12px;vertical-align:top}
+th{background:#f0ece4;position:sticky;top:0}.muted{color:#80776a}
+@media(max-width:700px){main{padding:12px}td,th{padding:5px}}
+</style></head><body><main>
+<h1>审计账</h1><p>所有工具的风险判定与写操作记录；只追加，不修改。</p>
+<table><thead><tr><th>时间</th><th>动作</th><th>风险</th><th>决定</th><th>目标</th><th>详情</th></tr></thead>
+<tbody id="rows"><tr><td colspan="6" class="muted">加载中…</td></tr></tbody></table>
+</main><script>
+fetch('/api/audit?limit=200').then(r=>r.json()).then(d=>{
+ const rows=d.items||[]; const tb=document.querySelector('#rows');
+ tb.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(x.ts)+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.risk)+'</td><td>'+esc(x.decision)+'</td><td>'+esc(x.target)+'</td><td>'+esc(x.detail)+'</td></tr>').join(''):'<tr><td colspan="6" class="muted">暂无记录</td></tr>';
+}).catch(e=>{document.querySelector('#rows').textContent='读取失败：'+e.message});
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+</script></body></html>

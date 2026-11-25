@@ -1,0 +1,15 @@
+#!/bin/sh
+# Q-单-1（2026-11-15 P164）：提交署名与可追溯守卫。
+#
+# 2026-11-17 P174：core.hooksPath 已设；pre-commit 只跑 contract 档（秒级），
+# 全量在 pre-push / pre-receive，不再因“全量红”而不敢装。 
+#
+# 判据与 cutoff 都在 tools/check_commits.py 里，本件只负责把它接到 git 上。
+# ★别用 dirname 推根目录：装在 .githooks/ 与复制到 .git/hooks/ 差一级
+#   （2026-11-15 装完第一次真跑就是被这句拦死的，报错长这样：
+#    can't open file '...\.git\tools\check_commits.py'）⇒ 问 git 要根。
+root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  echo "commit-msg：找不到仓库根，这次提交不放行（宁可拒，不要默默跳过守卫）。" >&2
+  exit 1
+}
+exec python "$root/tools/check_commits.py" --message-file "$1" --staged

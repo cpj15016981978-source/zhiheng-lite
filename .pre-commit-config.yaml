@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: luwu-gates-fast
+        name: 陆吾治理快检（已有 check 脚本）
+        entry: python tools/gates.py --tier contract
+        language: system
+        pass_filenames: false

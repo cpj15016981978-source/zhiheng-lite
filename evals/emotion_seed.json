@@ -1,0 +1,386 @@
+[
+  {
+    "text": "今天做报表",
+    "label": "warm"
+  },
+  {
+    "text": "在吗",
+    "label": "warm"
+  },
+  {
+    "text": "我回来了",
+    "label": "warm"
+  },
+  {
+    "text": "帮我看看这个",
+    "label": "warm"
+  },
+  {
+    "text": "晚上吃什么",
+    "label": "warm"
+  },
+  {
+    "text": "你还在吗",
+    "label": "warm"
+  },
+  {
+    "text": "收到",
+    "label": "warm"
+  },
+  {
+    "text": "这个怎么做",
+    "label": "warm"
+  },
+  {
+    "text": "明天再说",
+    "label": "warm"
+  },
+  {
+    "text": "随便聊聊",
+    "label": "warm"
+  },
+  {
+    "text": "我先忙了",
+    "label": "warm"
+  },
+  {
+    "text": "午饭吃过了",
+    "label": "warm"
+  },
+  {
+    "text": "哈哈笑死",
+    "label": "playful"
+  },
+  {
+    "text": "你太逗了",
+    "label": "playful"
+  },
+  {
+    "text": "好玩",
+    "label": "playful"
+  },
+  {
+    "text": "有意思",
+    "label": "playful"
+  },
+  {
+    "text": "哈哈哈",
+    "label": "playful"
+  },
+  {
+    "text": "笑不活了",
+    "label": "playful"
+  },
+  {
+    "text": "你真会整活",
+    "label": "playful"
+  },
+  {
+    "text": "这梗可以",
+    "label": "playful"
+  },
+  {
+    "text": "乐死我了",
+    "label": "playful"
+  },
+  {
+    "text": "太搞笑了",
+    "label": "playful"
+  },
+  {
+    "text": "逗我玩呢",
+    "label": "playful"
+  },
+  {
+    "text": "你嘴真贫",
+    "label": "playful"
+  },
+  {
+    "text": "好久没见",
+    "label": "nostalgic"
+  },
+  {
+    "text": "想你了",
+    "label": "nostalgic"
+  },
+  {
+    "text": "那时候",
+    "label": "nostalgic"
+  },
+  {
+    "text": "记得吗",
+    "label": "nostalgic"
+  },
+  {
+    "text": "以前我们",
+    "label": "nostalgic"
+  },
+  {
+    "text": "老照片",
+    "label": "nostalgic"
+  },
+  {
+    "text": "回不去了",
+    "label": "nostalgic"
+  },
+  {
+    "text": "想起以前",
+    "label": "nostalgic"
+  },
+  {
+    "text": "好久不见",
+    "label": "nostalgic"
+  },
+  {
+    "text": "那时候真好",
+    "label": "nostalgic"
+  },
+  {
+    "text": "旧事",
+    "label": "nostalgic"
+  },
+  {
+    "text": "还记得吗",
+    "label": "nostalgic"
+  },
+  {
+    "text": "今天很难过",
+    "label": "melancholy"
+  },
+  {
+    "text": "我不开心",
+    "label": "melancholy"
+  },
+  {
+    "text": "想哭",
+    "label": "melancholy"
+  },
+  {
+    "text": "委屈",
+    "label": "melancholy"
+  },
+  {
+    "text": "心里难受",
+    "label": "melancholy"
+  },
+  {
+    "text": "有点丧",
+    "label": "melancholy"
+  },
+  {
+    "text": "失落",
+    "label": "melancholy"
+  },
+  {
+    "text": "很伤心",
+    "label": "melancholy"
+  },
+  {
+    "text": "累到不想说话",
+    "label": "melancholy"
+  },
+  {
+    "text": "没人懂我",
+    "label": "melancholy"
+  },
+  {
+    "text": "心情很差",
+    "label": "melancholy"
+  },
+  {
+    "text": "不想上班",
+    "label": "melancholy"
+  },
+  {
+    "text": "太好了",
+    "label": "happy"
+  },
+  {
+    "text": "开心",
+    "label": "happy"
+  },
+  {
+    "text": "真棒",
+    "label": "happy"
+  },
+  {
+    "text": "耶",
+    "label": "happy"
+  },
+  {
+    "text": "爱你",
+    "label": "happy"
+  },
+  {
+    "text": "好消息",
+    "label": "happy"
+  },
+  {
+    "text": "升职了",
+    "label": "happy"
+  },
+  {
+    "text": "搞定了",
+    "label": "happy"
+  },
+  {
+    "text": "太高兴了",
+    "label": "happy"
+  },
+  {
+    "text": "今天真顺利",
+    "label": "happy"
+  },
+  {
+    "text": "太惊喜了",
+    "label": "happy"
+  },
+  {
+    "text": "庆祝一下",
+    "label": "happy"
+  },
+  {
+    "text": "随便",
+    "label": "distant"
+  },
+  {
+    "text": "无所谓",
+    "label": "distant"
+  },
+  {
+    "text": "算了",
+    "label": "distant"
+  },
+  {
+    "text": "不想说",
+    "label": "distant"
+  },
+  {
+    "text": "别问了",
+    "label": "distant"
+  },
+  {
+    "text": "没事",
+    "label": "distant"
+  },
+  {
+    "text": "你忙吧",
+    "label": "distant"
+  },
+  {
+    "text": "不想聊",
+    "label": "distant"
+  },
+  {
+    "text": "就那样",
+    "label": "distant"
+  },
+  {
+    "text": "无所谓了",
+    "label": "distant"
+  },
+  {
+    "text": "别管我",
+    "label": "distant"
+  },
+  {
+    "text": "不想解释",
+    "label": "distant"
+  },
+  {
+    "text": "嗯",
+    "label": "warm"
+  },
+  {
+    "text": "好",
+    "label": "warm"
+  },
+  {
+    "text": "知道了",
+    "label": "warm"
+  },
+  {
+    "text": "我在",
+    "label": "warm"
+  },
+  {
+    "text": "666",
+    "label": "playful"
+  },
+  {
+    "text": "牛的",
+    "label": "playful"
+  },
+  {
+    "text": "你可真行",
+    "label": "playful"
+  },
+  {
+    "text": "秀",
+    "label": "playful"
+  },
+  {
+    "text": "那年夏天",
+    "label": "nostalgic"
+  },
+  {
+    "text": "老地方",
+    "label": "nostalgic"
+  },
+  {
+    "text": "十年了",
+    "label": "nostalgic"
+  },
+  {
+    "text": "旧时光",
+    "label": "nostalgic"
+  },
+  {
+    "text": "心里堵",
+    "label": "melancholy"
+  },
+  {
+    "text": "提不起劲",
+    "label": "melancholy"
+  },
+  {
+    "text": "喘不过气",
+    "label": "melancholy"
+  },
+  {
+    "text": "空落落",
+    "label": "melancholy"
+  },
+  {
+    "text": "稳了",
+    "label": "happy"
+  },
+  {
+    "text": "漂亮",
+    "label": "happy"
+  },
+  {
+    "text": "终于",
+    "label": "happy"
+  },
+  {
+    "text": "值了",
+    "label": "happy"
+  },
+  {
+    "text": "随你",
+    "label": "distant"
+  },
+  {
+    "text": "爱咋咋地",
+    "label": "distant"
+  },
+  {
+    "text": "你定",
+    "label": "distant"
+  },
+  {
+    "text": "嗯",
+    "label": "distant"
+  }
+]
