@@ -1,132 +1,73 @@
-# Zhiheng Lite
+# 低配版 Muse v2
 
-A minimal, local-first AI office assistant.
+## v2.1 补丁（2026-11-24，仅修输入法误发，别的不动）
 
-One local model. No account. No database. No long-term memory. No cloud API required.
+- v2 有个 bug：对话框按 Enter 直接发，拼音组字中按 Enter 也会误发。v2.1 在 3 处加了输入法守卫（逻辑取自 open-claude-ui 的 ChatComposer，2026-11-23 实测 7 项全过；组件本身是 React，低配版 Muse 没有 React，只搬了判断逻辑）：
+  1. 对话输入框 index.txt 第 214 行附近：compositionstart/end 记组字状态，组字中、isComposing 或 keyCode 229 时 Enter 不发。
+  2. 记忆搜索框（第 233 行）、任务目标框（第 413 行）：同款一行判断。
+- 没动的部分：对话、任务、记忆、文件审批、自我检查、模型设置全部与 v2 相同；没搬 30 个 React 组件，也没换设计令牌。
+- 升级办法：如果你还没在电脑上跑过 v2，直接用 v2.1 整个文件夹替换 v2；如果已经跑过 v2，只替换 index.txt 一个文件即可。
 
-> This is the clean open-source distribution. The author's personal Windows app is a separate, private runtime and is not part of this repository.
 
-## What it is
+跑在你自己电脑上的个人 AI 助手。目标：**人人都能免费 AI 办公**。
 
-```text
-Browser UI  →  small Python server  →  bundled llama.cpp runtime  →  one core model
-```
+- 硬件门槛低：2 核 CPU、8GB 内存、无显卡就能跑。
+- 联网用免费大模型是主线；断网用本地小模型是备选。
+- 模型自由选：设置里选「自动 / 只用 API / 只用本地」。
 
-- Single model, configured in `config.json`
-- Stateless: chat history lives only in the browser tab
-- No database, no embeddings, no scheduler
-- No telemetry, no API keys, no accounts
-- MIT licensed; fork and replace anything
+## v2 新增（v1 的对话、记忆、定时任务、代码、设置全都在）
 
-## Requirements
+1. **任务页：规划循环**。给一个目标（例如“帮我写一份周报，保存成文件”），模型先拆成 3-6 步，展示计划，一步步执行，每步结果都记下来。点“执行下一步”走一步，做完一步再点下一步。
+2. **文件审批**。模型想写文件时，不直接写，先放进“待审批”。你点了“批准”才真正写进 `workspace/` 文件夹；点了“拒绝”就不写。只允许 `workspace/` 下的直接文件，后缀限 txt/md/csv/json/html/py，单个文件不超过 1MB，路径穿越和可执行文件都被挡住。
+3. **自我检查**。任务做完后，点“自我检查”，模型自己审一遍结果，只审一次，给出“通过”或要改的地方。
 
-- Python 3.10+
-- A release build that contains:
-  - `runtime/llama-server.exe`
-  - `models/core.gguf`
+**不做的**：MCP（太重）、记忆分层（现有记忆够用）。保持轻、免费、老电脑能跑。
 
-No Python packages are required beyond the standard library.
-No Ollama install, no model picker, no API key.
+**提醒**：规划和自我检查比较吃模型，本地小模型（3B、4B）效果有限，API 模式（免费 70B）更合适。
 
-Source checkouts do not contain the model or runtime (they are large binary
-release assets). For local development you can set `"dev_ollama": true` in
-`config.json` to use an existing Ollama instance.
+## 怎么跑
 
-## Quickstart
+1. 装 Python 3.10+（勾选 Add to PATH），装 Ollama（https://ollama.com）。
+2. 拉两个本地小模型（断网备选才用得到）：
+   - `ollama pull qwen3:4b`
+   - `ollama pull qwen2.5-coder:3b`
+3. 双击 `start.bat`，浏览器打开 http://127.0.0.1:8080。
+4. 去「设置」里选模型：
+   - 想用大模型：选 Groq 或 OpenRouter :free，填免费 key（获取地址在设置页里，不花钱、不绑卡）。
+   - 不想填 key：什么都不用做，默认自动模式会直接用本地小模型。
+   - 断网时自动走本地，不用你操心。
 
-```bash
-git clone <your-fork-url> zhiheng-lite
-cd zhiheng-lite
-# edit config.json if needed
-python cli.py doctor
-python cli.py serve
-```
+## 免费 API key 去哪拿（都不花钱）
 
-Open <http://127.0.0.1:8760>.
+- Groq：https://console.groq.com/keys（注册后建一个 key）
+- OpenRouter :free：https://openrouter.ai/keys（注册后建一个 key，模型名带 `:free` 的都是免费）
 
-Or start the server directly:
+key 只存在你电脑上的 `muse_config.json`，不上传、不发给别人。
 
-```bash
-python app.py
-```
+## 有什么功能
 
-## CLI
+- 对话：聊天、写代码、写脚本、做分析；回答里的代码自动存到「代码」页，只存不执行。
+- 任务：给目标，拆步骤，一步步执行；写文件先审批；做完能自我检查一次。
+- 记忆：你说过的话、AI 的回答都记进本地数据库，可搜索。
+- 定时任务：设个时间（例如每天 21:30 写日报），到点自动跑，结果记进记忆。
+- 设置：模型模式、服务商、key、模型名都能改，保存后立即生效。
 
-```bash
-python cli.py serve              # start the web UI
-python cli.py chat "hello"       # one-shot chat
-python cli.py chat               # interactive REPL
-python cli.py model status       # check the bundled core model
-python cli.py doctor             # check the bundled core runtime and model
-python cli.py version            # show the configured model
-```
+## 第一次运行要验证什么
 
-## Configuration
+1. 打开页面，顶栏显示「运行中 · auto模式」。
+2. 不填 key 直接发一句话：如果 Ollama 在跑，能收到本地模型的回答，来源显示「本地」。
+3. 填了免费 key 后再发一句话：来源显示「API」，回答明显更强。
+4. 拔网线（或关掉网络）再发一句话：自动切回本地，来源显示「本地（API 失败后自动切换）」。
+5. 去「任务」页写个目标（例如“写一份周报，保存成文件”），点“生成计划”，看它拆成几步；点“执行下一步”，走完后看“待审批”里有没有文件，批准后去 `workspace/` 文件夹确认文件在。
+6. 任务做完点“自我检查”，看它能不能审出问题。
+7. 加一个定时任务，确认它出现在列表里；第二天到点看它是否执行并记进记忆。
+8. （v2.1 新增）中文输入法检查：打开拼音输入法，输入“你好”组字中按 Enter，必须**不**发送；组字结束后再按 Enter，正常发送。搜索框和任务目标框同样试一次。
 
-Only `config.json`:
+## 注意
 
-```json
-{
-  "provider": "core",
-  "model": "qwen3-4b-instruct-q4",
-  "runtime": "runtime/llama-server.exe",
-  "model_path": "models/core.gguf",
-  "local_port": 8761,
-  "dev_ollama": false,
-  "host": "127.0.0.1",
-  "port": 8760,
-  "num_ctx": 4096,
-  "max_tokens": 2048,
-  "timeout": 300,
-  "system": "You are Zhiheng Lite, a local office assistant."
-}
-```
+- 这是 v2，聊天和任务本身还没在你电脑上真跑过 Ollama / 真调过 API（本机实测用桩模块验证了 10 项：建计划、执行步骤、文件审批、自我检查、HTTP 接口全通过）。第一次在你电脑上跑，以上面 7 条为准。
+- 模型名默认：Groq 用 `llama-3.3-70b-versatile`，OpenRouter 用 `meta-llama/llama-3.3-70b-instruct:free`。如果某天免费模型改名了，在设置里把模型名改掉就行。
+- 定时任务用的是你电脑本地时间；电脑关机时任务不会跑，开机后恢复。
+- 任务执行和自我检查每次都要调一次模型，会消耗免费额度。Groq 免费层每天 1000 次请求，一般个人用够了；OpenRouter :free 每天 50 次（不绑卡），省着点用。
 
-There is no model picker. Replace `models/core.gguf` only when you intend to
-ship a different single core model.
-
-## Design boundaries
-
-```text
-No memory
-No database
-No accounts
-No API keys
-No background jobs
-No arbitrary shell
-```
-
-The model is loaded by the bundled llama.cpp runtime. The server only accepts
-loopback connections by default. If you only have the source checkout, use
-the release assets or set `dev_ollama` for development.
-
-## Project layout
-
-```text
-app.py              server
-core_model.py       bundled llama.cpp client
-cli.py              command-line entry point
-config.json         core model, runtime, host, port
-runtime/            llama-server binary (release asset)
-models/             core.gguf (release asset)
-static/index.html   single-page chat UI
-tests/              standard-library tests
-```
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Security
-
-See [SECURITY.md](SECURITY.md). Please do not report vulnerabilities in public issues.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
-## Download
-
-Source code is here. The Windows runtime is a release asset because it contains
-`llama-server` and `core.gguf` (about 2.3 GB), which GitHub cannot store as a
-single release asset. See [PUBLISH.md](PUBLISH.md) for the split parts and
-checksums.
+> 边界：守卫逻辑是用真实输入法事件序列模拟测的（compositionstart → keydown 229 → compositionend），没在真浏览器里接真拼音输入法测过。落到你电脑上，发中文消息前先按上面第 8 条试一次。

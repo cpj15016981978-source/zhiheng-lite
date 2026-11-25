@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>低配版 Muse</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f2f2f2; color: #222; height: 100vh; display: flex; flex-direction: column; }
+header { background: #1a1a2e; color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+header h1 { font-size: 18px; font-weight: 600; }
+header .sub { font-size: 12px; color: #9aa0b4; }
+header .status { margin-left: auto; font-size: 12px; color: #7ee787; }
+nav { display: flex; background: #fff; border-bottom: 1px solid #ddd; }
+nav button { flex: 1; padding: 12px 0; border: none; background: #fff; font-size: 15px; cursor: pointer; color: #555; border-bottom: 2px solid transparent; }
+nav button.active { color: #1a1a2e; border-bottom-color: #1a1a2e; font-weight: 600; }
+main { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+section { flex: 1; overflow-y: auto; padding: 14px; display: none; }
+section.active { display: block; }
+#chat-log { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.msg { max-width: 85%; padding: 10px 12px; border-radius: 12px; white-space: pre-wrap; word-break: break-word; line-height: 1.6; font-size: 15px; }
+.msg.user { align-self: flex-end; background: #1a1a2e; color: #fff; border-bottom-right-radius: 4px; }
+.msg.ai { align-self: flex-start; background: #fff; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px; }
+.msg .meta { font-size: 11px; color: #999; margin-top: 6px; }
+.msg.user .meta { color: #bbb; }
+.composer { display: flex; gap: 8px; padding: 10px 14px; background: #fff; border-top: 1px solid #ddd; }
+.composer input { flex: 1; padding: 10px 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 8px; outline: none; }
+.composer input:focus { border-color: #1a1a2e; }
+.composer button, .btn { padding: 10px 18px; font-size: 15px; border: none; border-radius: 8px; background: #1a1a2e; color: #fff; cursor: pointer; }
+.composer button:disabled { opacity: .5; cursor: wait; }
+.btn.secondary { background: #666; }
+.btn.warn { background: #b3261e; }
+.card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px; margin-bottom: 10px; font-size: 14px; line-height: 1.6; }
+.card .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef; color: #446; margin-right: 6px; }
+.card .tag.ai { background: #e6f7ee; color: #27663f; }
+.card .tag.task { background: #fff3e0; color: #8a5a00; }
+.card .tag.done { background: #e6f7ee; color: #27663f; }
+.card .tag.wait { background: #fff3e0; color: #8a5a00; }
+.card .time { font-size: 12px; color: #999; }
+.row { display: flex; gap: 8px; margin-bottom: 10px; }
+.row input, .row select { flex: 1; padding: 10px 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 8px; outline: none; background: #fff; }
+.row input:focus, .row select:focus { border-color: #1a1a2e; }
+.row label { flex: 0 0 90px; align-self: center; font-size: 14px; color: #555; }
+pre.code { background: #1a1a2e; color: #e6e6e6; padding: 12px; border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+pre.result { background: #f7f7f7; border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin-top: 8px; }
+.empty { color: #999; text-align: center; padding: 30px 0; font-size: 14px; }
+.hint { font-size: 12px; color: #888; margin-top: 8px; line-height: 1.6; }
+.hint a { color: #1a1a2e; }
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; padding: 10px 0; font-size: 14px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; color: #555; }
+.seg button.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+h3.sec { font-size: 15px; margin: 16px 0 8px; }
+h3.sec:first-child { margin-top: 0; }
+</style>
+</head>
+<body>
+<header>
+<div>
+<h1>低配版 Muse</h1>
+<div class="sub">人人都能免费 AI 办公 · 2核8G · API / 本地自由选</div>
+</div>
+<div class="status" id="status">● 本地运行中</div>
+</header>
+<nav>
+<button class="active" data-tab="chat">对话</button>
+<button data-tab="plan">任务</button>
+<button data-tab="memory">记忆</button>
+<button data-tab="tasks">定时任务</button>
+<button data-tab="scripts">代码</button>
+<button data-tab="settings">设置</button>
+</nav>
+<main>
+<section id="tab-chat" class="active" style="display:flex;flex-direction:column;padding:0;">
+<div id="chat-log" style="flex:1;overflow-y:auto;padding:14px;"></div>
+<div class="composer">
+<input id="chat-input" type="text" placeholder="输入办公指令，例如：帮我写个批量重命名脚本" autocomplete="off">
+<button id="send-btn">发送</button>
+</div>
+</section>
+<section id="tab-plan">
+<h3 class="sec">新建任务：给一个目标，拆成步骤一步步做</h3>
+<div class="row">
+<input id="plan-goal" type="text" placeholder="例如：帮我写一份本周工作周报，保存成文件" autocomplete="off">
+<button class="btn" id="plan-create">生成计划</button>
+</div>
+<div class="hint">规划、自我检查这类活比较吃模型，本地小模型效果有限，API 模式（免费 70B）更合适。任务存在本地数据库，重启也不丢。</div>
+<div id="plan-current"></div>
+<h3 class="sec">待审批的文件</h3>
+<div class="hint">模型想写文件时，先放在这里。你点了“批准”才真正写进 workspace/ 文件夹；不批准就不写。只允许 txt/md/csv/json/html/py，单个文件不超过 1MB。</div>
+<div id="pending-list"></div>
+<h3 class="sec">工作区文件（workspace/）</h3>
+<div id="file-list"></div>
+<div id="file-view" style="display:none;">
+<div class="row"><button class="btn secondary" id="file-back">← 返回列表</button></div>
+<pre class="code" id="file-content"></pre>
+</div>
+<h3 class="sec">最近的任务</h3>
+<div id="plan-list"></div>
+</section>
+<section id="tab-memory">
+<div class="row">
+<input id="search-input" type="text" placeholder="搜记忆关键词，例如：日报">
+<button class="btn" id="search-btn">搜索</button>
+<button class="btn secondary" id="memory-refresh">全部</button>
+</div>
+<div id="memory-list"></div>
+</section>
+<section id="tab-tasks">
+<div class="row">
+<input id="task-time" type="text" placeholder="时间 HH:MM，例如 21:30" style="flex:0 0 130px;">
+<input id="task-prompt" type="text" placeholder="每天这个时间做什么，例如：提醒我写日报">
+<button class="btn" id="task-add">添加</button>
+</div>
+<div id="task-list"></div>
+<div class="hint">任务存在本地数据库里，重启 App 也不丢；到点自动执行，结果记进记忆。</div>
+</section>
+<section id="tab-scripts">
+<div id="script-list"></div>
+<div id="script-view" style="display:none;">
+<div class="row"><button class="btn secondary" id="script-back">← 返回列表</button></div>
+<pre class="code" id="script-content"></pre>
+</div>
+<div class="hint">AI 回答里的代码会自动存到这里，只存不执行，跑之前先看一眼。</div>
+</section>
+<section id="tab-settings">
+<div class="card">
+<div style="font-weight:600;margin-bottom:10px;">模型怎么选</div>
+<div class="seg" id="mode-seg">
+<button data-mode="auto">自动（推荐）</button>
+<button data-mode="api">只用 API</button>
+<button data-mode="local">只用本地</button>
+</div>
+<div class="hint">自动：有 key 先用免费 API 大模型，API 不行自动切本地小模型；没填 key 直接用本地。断网时自动走本地。</div>
+</div>
+<div class="card">
+<div style="font-weight:600;margin-bottom:10px;">免费 API（联网大模型）</div>
+<div class="row"><label>服务商</label>
+<select id="cfg-provider">
+<option value="groq">Groq（免费）</option>
+<option value="openrouter">OpenRouter :free（免费）</option>
+</select></div>
+<div class="row"><label>API key</label>
+<input id="cfg-key" type="password" placeholder="粘贴免费 key，只存你自己电脑里" autocomplete="off"></div>
+<div class="row"><label>模型名</label>
+<input id="cfg-model" type="text" placeholder="留空用默认免费模型" autocomplete="off"></div>
+<div class="hint">免费 key 获取：<span id="signup-links"></span>。不花钱、不绑卡。key 只存在本机 muse_config.json，不上传。</div>
+</div>
+<div class="card">
+<div style="font-weight:600;margin-bottom:10px;">本地小模型（断网备选，Ollama）</div>
+<div class="row"><label>通用模型</label>
+<input id="cfg-local-main" type="text" placeholder="qwen3:4b" autocomplete="off"></div>
+<div class="row"><label>写代码模型</label>
+<input id="cfg-local-code" type="text" placeholder="qwen2.5-coder:3b" autocomplete="off"></div>
+<div class="hint">本地模型要先在 Ollama 里 pull 过，例如 ollama pull qwen3:4b。</div>
+</div>
+<button class="btn" id="cfg-save" style="width:100%;">保存设置</button>
+<div class="hint" id="cfg-msg"></div>
+</section>
+</main>
+<script>
+var $ = function(s){ return document.querySelector(s); };
+var KIND_TAG = { user: ['你', ''], ai: ['AI', 'ai'], task: ['定时任务', 'task'] };
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.querySelectorAll('nav button').forEach(function(b){
+b.addEventListener('click', function(){
+document.querySelectorAll('nav button').forEach(function(x){ x.classList.remove('active'); });
+b.classList.add('active');
+document.querySelectorAll('main section').forEach(function(s){ s.classList.remove('active'); });
+var tab = document.getElementById('tab-' + b.dataset.tab);
+tab.classList.add('active');
+tab.style.display = (b.dataset.tab === 'chat') ? 'flex' : 'block';
+if (b.dataset.tab === 'plan') loadPlanTab();
+if (b.dataset.tab === 'memory') loadMemories();
+if (b.dataset.tab === 'tasks') loadTasks();
+if (b.dataset.tab === 'scripts') loadScripts();
+if (b.dataset.tab === 'settings') loadConfig();
+});
+});
+var log = $('#chat-log'), input = $('#chat-input'), sendBtn = $('#send-btn');
+function addMsg(text, who, meta){
+var d = document.createElement('div');
+d.className = 'msg ' + who;
+d.innerHTML = esc(text) + (meta ? '<div class="meta">' + esc(meta) + '</div>' : '');
+log.appendChild(d);
+log.scrollTop = log.scrollHeight;
+return d;
+}
+async function send(){
+var prompt = input.value.trim();
+if (!prompt || sendBtn.disabled) return;
+input.value = '';
+addMsg(prompt, 'user');
+sendBtn.disabled = true;
+var thinking = addMsg('正在思考…', 'ai');
+try {
+var r = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({prompt: prompt}) });
+var j = await r.json();
+thinking.remove();
+if (j.ok) {
+var meta = '模型：' + j.model + ' · 来源：' + (j.source || '');
+if (j.saved_scripts && j.saved_scripts.length) meta += ' · 代码已存：' + j.saved_scripts.join('、');
+addMsg(j.reply, 'ai', meta);
+} else {
+addMsg('出错了：' + (j.error || '未知错误'), 'ai');
+}
+} catch (e) {
+thinking.remove();
+addMsg('连不上本地服务，请确认 App 还在运行。', 'ai');
+}
+sendBtn.disabled = false;
+input.focus();
+}
+sendBtn.addEventListener('click', send);
+var composing = false;
+input.addEventListener('compositionstart', function(){ composing = true; });
+input.addEventListener('compositionend', function(){ composing = false; });
+input.addEventListener('keydown', function(e){
+  if (composing || e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Enter') send();
+});
+async function loadMemories(q){
+var url = q ? '/api/search?q=' + encodeURIComponent(q) : '/api/memories';
+var r = await fetch(url); var j = await r.json();
+var list = $('#memory-list');
+if (!j.ok || !j.memories.length) { list.innerHTML = '<div class="empty">暂无记忆</div>'; return; }
+list.innerHTML = j.memories.map(function(m){
+var t = KIND_TAG[m.kind] || [m.kind, ''];
+return '<div class="card"><span class="tag ' + t[1] + '">' + esc(t[0]) + '</span>'
++ '<span class="time">' + esc(m.created_at) + '</span><div>' + esc(m.content) + '</div></div>';
+}).join('');
+}
+$('#search-btn').addEventListener('click', function(){ loadMemories($('#search-input').value.trim()); });
+$('#search-input').addEventListener('keydown', function(e){ if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') loadMemories(e.target.value.trim()); });
+$('#memory-refresh').addEventListener('click', function(){ $('#search-input').value = ''; loadMemories(); });
+async function loadTasks(){
+var r = await fetch('/api/tasks'); var j = await r.json();
+var list = $('#task-list');
+if (!j.ok || !j.tasks.length) { list.innerHTML = '<div class="empty">暂无定时任务，用上面那行加一个</div>'; return; }
+list.innerHTML = j.tasks.map(function(t){
+return '<div class="card"><span class="tag task">每天 ' + esc(t.time) + '</span>'
++ '<div>' + esc(t.prompt) + '</div>'
++ '<div class="time">上次执行：' + esc(t.last_run || '还没跑过') + '</div></div>';
+}).join('');
+}
+$('#task-add').addEventListener('click', async function(){
+var time = $('#task-time').value.trim(), prompt = $('#task-prompt').value.trim();
+if (!time || !prompt) { alert('时间和内容都要填'); return; }
+var r = await fetch('/api/task', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({time: time, prompt: prompt}) });
+var j = await r.json();
+alert(j.message || (j.ok ? '已添加' : '添加失败'));
+if (j.ok) { $('#task-time').value = ''; $('#task-prompt').value = ''; loadTasks(); }
+});
+async function loadScripts(){
+var r = await fetch('/api/scripts'); var j = await r.json();
+var list = $('#script-list');
+$('#script-view').style.display = 'none';
+list.style.display = 'block';
+if (!j.ok || !j.scripts.length) { list.innerHTML = '<div class="empty">还没有保存的代码</div>'; return; }
+list.innerHTML = j.scripts.map(function(s){
+return '<div class="card"><a href="#" data-name="' + esc(s.name) + '" style="color:#1a1a2e;">' + esc(s.name) + '</a>'
++ '<span class="time"> · ' + (s.size/1024).toFixed(1) + ' KB</span></div>';
+}).join('');
+list.querySelectorAll('a').forEach(function(a){
+a.addEventListener('click', async function(e){
+e.preventDefault();
+var r2 = await fetch('/api/script?name=' + encodeURIComponent(a.dataset.name));
+var j2 = await r2.json();
+if (j2.ok) {
+$('#script-content').textContent = j2.content;
+list.style.display = 'none';
+$('#script-view').style.display = 'block';
+}
+});
+});
+}
+$('#script-back').addEventListener('click', function(){ loadScripts(); });
+var curMode = 'auto';
+document.querySelectorAll('#mode-seg button').forEach(function(b){
+b.addEventListener('click', function(){
+curMode = b.dataset.mode;
+document.querySelectorAll('#mode-seg button').forEach(function(x){ x.classList.toggle('active', x === b); });
+});
+});
+async function loadConfig(){
+var r = await fetch('/api/config'); var j = await r.json();
+if (!j.ok) return;
+var c = j.config || {};
+curMode = c.mode || 'auto';
+document.querySelectorAll('#mode-seg button').forEach(function(x){ x.classList.toggle('active', x.dataset.mode === curMode); });
+$('#cfg-provider').value = c.provider || 'groq';
+$('#cfg-key').value = c.api_key || '';
+$('#cfg-model').value = c.api_model || '';
+$('#cfg-local-main').value = c.local_main || '';
+$('#cfg-local-code').value = c.local_code || '';
+var links = [];
+Object.keys(j.providers || {}).forEach(function(k){
+var p = j.providers[k];
+links.push('<a href="' + p.signup + '" target="_blank" rel="noopener">' + esc(p.label) + '</a>');
+});
+$('#signup-links').innerHTML = links.join('、');
+}
+$('#cfg-save').addEventListener('click', async function(){
+var body = {
+mode: curMode,
+provider: $('#cfg-provider').value,
+api_key: $('#cfg-key').value.trim(),
+api_model: $('#cfg-model').value.trim(),
+local_main: $('#cfg-local-main').value.trim(),
+local_code: $('#cfg-local-code').value.trim()
+};
+var r = await fetch('/api/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+var j = await r.json();
+$('#cfg-msg').textContent = j.ok ? '已保存。模式：' + curMode + '。' : ('保存失败：' + (j.error || '未知错误'));
+if (j.ok) refreshStatus();
+});
+/* ===== 任务页：规划循环 + 文件审批 + 工作区文件 ===== */
+var currentPlanId = null;
+function renderPlan(plan){
+var el = $('#plan-current');
+if (!plan) { el.innerHTML = ''; return; }
+var done = plan.steps.filter(function(s){ return s.status === 'done'; }).length;
+var html = '<div class="card"><div style="font-weight:600;">目标：' + esc(plan.goal) + '</div>'
++ '<div class="time">创建：' + esc(plan.created_at) + ' · 状态：' + (plan.status === 'done' ? '已完成' : plan.status === 'running' ? '进行中' : '草稿') + ' · ' + done + '/' + plan.steps.length + ' 步</div>';
+plan.steps.forEach(function(s){
+var tag = s.status === 'done' ? '<span class="tag done">已完成</span>' : '<span class="tag wait">待执行</span>';
+html += '<div style="margin-top:10px;">' + tag + '<b>步骤 ' + (s.idx + 1) + '：</b>' + esc(s.text) + '</div>';
+if (s.result) html += '<pre class="result">' + esc(s.result) + '</pre>';
+});
+html += '<div class="row" style="margin-top:12px;">'
++ '<button class="btn" id="plan-run-step"' + (done >= plan.steps.length ? ' disabled' : '') + '>执行下一步</button>'
++ '<button class="btn secondary" id="plan-reflect"' + (done < plan.steps.length ? ' disabled' : '') + '>自我检查</button>'
++ '</div><div id="plan-reflection"></div></div>';
+el.innerHTML = html;
+var runBtn = $('#plan-run-step');
+if (runBtn) runBtn.addEventListener('click', async function(){
+runBtn.disabled = true;
+runBtn.textContent = '执行中…';
+try {
+var r = await fetch('/api/plan/step', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({plan_id: plan.id}) });
+var j = await r.json();
+if (j.ok) {
+renderPlan(j.plan);
+if (j.step && j.step.proposals && j.step.proposals.length) alert('这一步想写 ' + j.step.proposals.length + ' 个文件，已放进“待审批”，请检查后批准。');
+loadPending();
+} else {
+alert('执行失败：' + (j.error || '未知错误'));
+renderPlan(plan);
+}
+} catch (e) { alert('连不上本地服务'); renderPlan(plan); }
+});
+var refBtn = $('#plan-reflect');
+if (refBtn) refBtn.addEventListener('click', async function(){
+refBtn.disabled = true;
+refBtn.textContent = '检查中…';
+try {
+var r = await fetch('/api/plan/reflect', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({plan_id: plan.id}) });
+var j = await r.json();
+var box = $('#plan-reflection');
+if (j.ok) {
+box.innerHTML = '<pre class="result">自我检查（模型：' + esc(j.model) + ' · ' + esc(j.source || '') + '）：\n' + esc(j.reflection) + '</pre>';
+} else {
+box.innerHTML = '<div class="hint">检查失败：' + esc(j.error || '未知错误') + '</div>';
+}
+} catch (e) { alert('连不上本地服务'); }
+refBtn.disabled = false;
+refBtn.textContent = '自我检查';
+});
+}
+async function loadPlanTab(){
+var r = await fetch('/api/plans'); var j = await r.json();
+var list = $('#plan-list');
+if (!j.ok || !j.plans.length) { list.innerHTML = '<div class="empty">还没有任务，在上面写个目标开始吧</div>'; }
+else {
+list.innerHTML = j.plans.map(function(p){
+return '<div class="card"><a href="#" data-id="' + p.id + '" style="color:#1a1a2e;">' + esc(p.goal) + '</a>'
++ '<span class="time"> · ' + esc(p.created_at) + ' · ' + (p.status === 'done' ? '已完成' : p.status === 'running' ? '进行中' : '草稿') + '</span></div>';
+}).join('');
+list.querySelectorAll('a').forEach(function(a){
+a.addEventListener('click', async function(e){
+e.preventDefault();
+openPlan(parseInt(a.dataset.id, 10));
+});
+});
+}
+loadPending();
+loadFiles();
+}
+async function openPlan(pid){
+var r = await fetch('/api/plan?id=' + pid); var j = await r.json();
+if (j.ok) { currentPlanId = pid; renderPlan(j.plan); window.scrollTo(0, 0); }
+}
+$('#plan-create').addEventListener('click', async function(){
+var goal = $('#plan-goal').value.trim();
+if (!goal) { alert('请先写目标'); return; }
+var btn = $('#plan-create');
+btn.disabled = true;
+btn.textContent = '拆解中…';
+try {
+var r = await fetch('/api/plan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({goal: goal}) });
+var j = await r.json();
+if (j.ok) {
+currentPlanId = j.plan_id;
+$('#plan-goal').value = '';
+renderPlan(j.plan);
+loadPlanTab();
+} else {
+alert('生成计划失败：' + (j.error || '未知错误'));
+}
+} catch (e) { alert('连不上本地服务'); }
+btn.disabled = false;
+btn.textContent = '生成计划';
+});
+$('#plan-goal').addEventListener('keydown', function(e){ if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') $('#plan-create').click(); });
+async function loadPending(){
+var r = await fetch('/api/pending'); var j = await r.json();
+var list = $('#pending-list');
+if (!j.ok || !j.pending.length) { list.innerHTML = '<div class="empty">没有待审批的文件</div>'; return; }
+list.innerHTML = j.pending.map(function(p){
+return '<div class="card"><b>' + esc(p.filename) + '</b>'
++ '<span class="time"> · 任务#' + p.plan_id + ' 第 ' + (p.step_idx + 1) + ' 步 · ' + esc(p.created_at) + '</span>'
++ '<pre class="result">' + esc(p.content.slice(0, 500)) + (p.content.length > 500 ? '\n……（共 ' + p.content.length + ' 字）' : '') + '</pre>'
++ '<div class="row" style="margin-top:8px;margin-bottom:0;">'
++ '<button class="btn" data-act="approve" data-id="' + p.id + '">批准写入</button>'
++ '<button class="btn warn" data-act="reject" data-id="' + p.id + '">拒绝</button>'
++ '</div></div>';
+}).join('');
+list.querySelectorAll('button').forEach(function(b){
+b.addEventListener('click', async function(){
+var act = b.dataset.act, id = parseInt(b.dataset.id, 10);
+var r = await fetch('/api/pending/' + act, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id: id}) });
+var j = await r.json();
+alert(j.message || (j.ok ? '已处理' : '处理失败'));
+loadPending();
+loadFiles();
+refreshStatus();
+});
+});
+}
+async function loadFiles(){
+var r = await fetch('/api/files'); var j = await r.json();
+var list = $('#file-list');
+$('#file-view').style.display = 'none';
+list.style.display = 'block';
+if (!j.ok || !j.files.length) { list.innerHTML = '<div class="empty">工作区还是空的，任务里批准写入的文件会出现在这里</div>'; return; }
+list.innerHTML = j.files.map(function(f){
+return '<div class="card"><a href="#" data-name="' + esc(f.name) + '" style="color:#1a1a2e;">' + esc(f.name) + '</a>'
++ '<span class="time"> · ' + (f.size/1024).toFixed(1) + ' KB</span></div>';
+}).join('');
+list.querySelectorAll('a').forEach(function(a){
+a.addEventListener('click', async function(e){
+e.preventDefault();
+var r2 = await fetch('/api/file?name=' + encodeURIComponent(a.dataset.name));
+var j2 = await r2.json();
+if (j2.ok) {
+$('#file-content').textContent = j2.content;
+list.style.display = 'none';
+$('#file-view').style.display = 'block';
+}
+});
+});
+}
+$('#file-back').addEventListener('click', function(){ loadFiles(); });
+async function refreshStatus(){
+try {
+var r = await fetch('/api/status'); var j = await r.json();
+if (j.ok) $('#status').textContent = '● 运行中 · ' + j.mode + '模式 · ' + j.memories + ' 条记忆 · ' + j.tasks + ' 个任务' + (j.api_configured ? ' · API 已配' : ' · 未配 API（用本地）') + (j.pending ? ' · 待审批 ' + j.pending + ' 个' : '');
+} catch (e) { $('#status').textContent = '● 服务未连接'; }
+}
+refreshStatus();
+addMsg('你好，我是低配版 Muse v2，跑在你自己电脑上的个人 AI 助手。v2 新增了任务页：给一个目标，我先拆成步骤一步步做；想写文件时先等你批准；做完还能自我检查一次。', 'ai');
+input.focus();
+</script>
+</body>
+</html>
