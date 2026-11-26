@@ -23,9 +23,12 @@ CAPABILITY = {
     "approval": "未获单独批准；由调用方显式开启，不自动加载",
 }
 
-ROOT = pathlib.Path(os.environ.get(
-    "PAI_WIKI_DIR",
-    str(paths.APP_ROOT / "wiki")))
+def wiki_root():
+    """每次取当前 PAI_WIKI_DIR，避免测试/多场景共用时拿到导入时的旧值。"""
+    return pathlib.Path(os.environ.get("PAI_WIKI_DIR") or str(paths.APP_ROOT / "wiki"))
+
+
+ROOT = wiki_root()  # 兼容旧引用；新代码请用 wiki_root()
 
 
 def enabled():
@@ -68,7 +71,7 @@ class WikiError(ValueError):
 
 class Wiki:
     def __init__(self, root=None):
-        self.root = pathlib.Path(root or ROOT)
+        self.root = pathlib.Path(root or wiki_root())
 
     def _paths(self):
         if not self.root.exists():

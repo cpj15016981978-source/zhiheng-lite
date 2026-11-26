@@ -30,6 +30,8 @@ nul
 reports/*
 !reports/.gitkeep
 wiki/
+!tests/fixtures/wiki/
+!tests/fixtures/wiki/*.md
 muse_config.json
 providers.json
 workspace/

@@ -1,21 +1,27 @@
 """契约文档单一真源一致性闸门（只读，不改任何文件）。
 
 依据 CONTRACT_MASTER.json 声明的唯一主本，核对所有副本是否漂移：
-  - policy=mirror        : 须与主本逐字节一致，漂移/缺失 -> FAIL
+  - policy=mirror        : 存在时须与主本逐字节一致，漂移 -> FAIL；
+                           外部投递面未安装时 SKIP（换机器不该判漂移）
   - policy=frozen        : 历史/归档快照，永不追平，跳过判定
   - policy=counterparty  : 其他 AI 的件，只知会差距，不计 FAIL
+
+路径解析：master.path / copies[].path 相对声明文件所在仓库根解析；
+绝对路径仅用于声明外部投递面。设置 PAI_CONTRACT_REQUIRE_MIRRORS=1 时，
+缺失的 mirror 也判 FAIL（适合投递机自检）。
 
 用法：
     python tools/check_contract_master.py
     python tools/check_contract_master.py --json
     python tools/check_contract_master.py --master-dir DIR   # 声明文件所在目录
 
-退出码：mirror 有漂移=1，全部一致=0（frozen/counterparty 不影响退出码）。
+退出码：mirror 有漂移=1，全部一致/外部面未装=0。
 设计约束：本脚本绝不写文件、不联网、不起进程；纯 sha256 读。
 """
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -38,9 +44,9 @@ def load_declaration(master_dir):
 
 
 def resolve_master_path(decl, mf):
-    """主本路径：优先用绝对路径，否则相对声明文件所在目录。"""
+    """主本路径：相对声明文件所在仓库根解析；兼容旧 path_abs 声明。"""
     m = decl["master"]
-    p = Path(m.get("path_abs") or m["path"])
+    p = Path(m.get("path") or m.get("path_abs") or "")
     if not p.is_absolute():
         p = mf.parent / p
     return p
@@ -57,20 +63,25 @@ def check(decl, mf):
 
     results["master_sha256"] = sha256(master)
 
+    require_mirrors = os.environ.get("PAI_CONTRACT_REQUIRE_MIRRORS", "").strip().lower() in (
+        "1", "on", "true", "yes")
     for c in decl.get("copies", []):
-        p = Path(c["path_abs"])
+        p = Path(c.get("path") or c.get("path_abs") or "")
+        if not p.is_absolute():
+            p = mf.parent / p
         policy = c["policy"]
         item = {"path": str(p), "role": c["role"], "policy": policy,
                 "status": None, "detail": ""}
 
         if not p.is_file():
-            if policy == "mirror":
+            if policy == "mirror" and require_mirrors:
                 item["status"] = "FAIL"
-                item["detail"] = "mirror 副本缺失"
+                item["detail"] = "mirror 副本缺失（PAI_CONTRACT_REQUIRE_MIRRORS=1）"
                 results["fail"] += 1
             else:
                 item["status"] = "SKIP"
-                item["detail"] = "非 mirror 副本缺失（%s），只知会" % policy
+                item["detail"] = ("外部 mirror 未安装，默认 SKIP" if policy == "mirror"
+                                   else "非 mirror 副本缺失（%s），只知会" % policy)
                 results["warn"] += 1
             results["copies"].append(item)
             continue

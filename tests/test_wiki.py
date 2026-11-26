@@ -8,14 +8,18 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from pai import wiki as W  # noqa: E402
 
+FIXTURE = pathlib.Path(__file__).resolve().parent / "fixtures" / "wiki"
+
 
 class WikiTest(unittest.TestCase):
     def setUp(self):
         os.environ["PAI_WIKI"] = "on"
+        os.environ["PAI_WIKI_DIR"] = str(FIXTURE)
         self.w = W.Wiki()
 
     def tearDown(self):
         os.environ.pop("PAI_WIKI", None)
+        os.environ.pop("PAI_WIKI_DIR", None)
 
     def test_mainline_loaded(self):
         p = self.w.get("mainline")

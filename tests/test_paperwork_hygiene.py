@@ -15,6 +15,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -204,6 +205,16 @@ class TestWholeFaceFailure(unittest.TestCase):
         self.assertEqual(len(v), 1, v)
         self.assertIn("[H4]", v[0])
         self.assertIn("比对面塌成零件", v[0])
+
+    def test_missing_archive_dirs_on_clean_tree_are_skipped(self):
+        """干净 clone 没有本机归档片，不该替投递机背 H4。"""
+        root = Path(tempfile.mkdtemp())
+        (root / "readme.txt").write_bytes(GOOD.encode("utf-8") + CRLF)
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("PAI_PAPERWORK_REQUIRE_ARCHIVES", None)
+            v, _d, _n, st = CP.run(root, cutoff=ALWAYS)
+        self.assertFalse([x for x in v if "归档登记" in x], v)
+        self.assertEqual(st["arch_skipped"], 2)
 
 
 class TestWhitelistTeeth(_Fixture):

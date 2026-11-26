@@ -4,13 +4,13 @@
     "本文件确立唯一主本，防止多副本各自漂移（2026-11-16 评审第5条：三仓四分叉）。",
     "规则：任何 AI 要改协作规程/接口契约，只改 master 指向的那一份；其余副本一律由同步产生，禁止手改。",
     "一致性由 tools/check_contract_master.py 自动校验（只读，报漂移，不改文件）。",
+    "主本路径相对本文件所在仓库根解析；外部 mirror 未安装时 SKIP，不把换机器判成漂移。",
     "注：契约文档正文一个字节不改——它被 check_paperwork.py / verify_coordinates.py 严密守护，且为 DS 共享黑板。"
   ],
   "schema_version": 1,
   "declared_at": "2026-11-16",
   "master": {
     "path": "00_协作规程与接口契约.txt",
-    "path_abs": "C:\\Users\\Administrator\\Documents\\Qoder\\2026-10-19\\14868c32\\personal-ai-system\\00_协作规程与接口契约.txt",
     "role": "唯一权威主本（发布位脊柱）",
     "authority_basis": [
       "git 跟踪（git ls-files 可查）",
@@ -24,38 +24,38 @@
   },
   "copies": [
     {
-      "path_abs": "D:\\Q\\personal-ai-system\\00_协作规程与接口契约.txt",
+      "path": "D:\\Q\\personal-ai-system\\00_协作规程与接口契约.txt",
       "role": "投递镜像（check_relay R1 自动守护，须逐字节等于主本）",
       "policy": "mirror",
       "note": "由发布流程复制产生；check_relay.py R1 已守，本闸门只复核不重复判"
     },
     {
-      "path_abs": "D:\\QingniaoBundle\\spine\\00_协作规程与接口契约.txt",
+      "path": "D:\\QingniaoBundle\\spine\\00_协作规程与接口契约.txt",
       "role": "自包含包后端副本（打包快照）",
       "policy": "mirror",
       "note": "由 build_selfcontained.ps1 robocopy 产生；重新打包可再同步"
     },
     {
-      "path_abs": "D:\\QingniaoBundle\\updates\\extract-1.0.1\\spine\\00_协作规程与接口契约.txt",
+      "path": "D:\\QingniaoBundle\\updates\\extract-1.0.1\\spine\\00_协作规程与接口契约.txt",
       "role": "历史更新包内副本（归档快照）",
       "policy": "frozen",
       "note": "update 包已发布，属历史冻结物，不追平、不手改"
     },
     {
-      "path_abs": "D:\\Q\\00_协作规程与接口契约.txt",
+      "path": "D:\\Q\\00_协作规程与接口契约.txt",
       "role": "投递板根黑板（DeepSeek 对方件）",
       "policy": "counterparty",
       "note": "ADR-081：不代写不代改对方件；落后由 DS 自行处理，本闸门只知会"
     },
     {
-      "path_abs": "D:\\Q\\_backup_20261020_2033\\00_协作规程与接口契约.txt",
+      "path": "D:\\Q\\_backup_20261020_2033\\00_协作规程与接口契约.txt",
       "role": "历史归档（冻结）",
       "policy": "frozen",
       "note": "_backup_ 前缀，按归档规矩永不追平，判它红只会诱发改归档换绿"
     }
   ],
   "policy_legend": {
-    "mirror": "须与主本逐字节一致；漂移报 FAIL",
+    "mirror": "存在时须与主本逐字节一致，漂移报 FAIL；外部投递面未安装时 SKIP（设 PAI_CONTRACT_REQUIRE_MIRRORS=1 可把缺失判 FAIL）",
     "frozen": "历史/归档快照，永不追平；跳过一致性判定",
     "counterparty": "其他 AI 的件；只知会差距，不报 FAIL、不修改"
   }

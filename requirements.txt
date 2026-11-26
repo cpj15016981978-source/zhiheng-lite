@@ -7,7 +7,7 @@
 #   pgvector
 
 # ── 2026-11-15 P163/P164：Boss 点头「脊柱允许带三方解析库」后追加 ──────────
-# 今天记录在案的运行时依赖共四枚，住址与判据都写清楚（P164 那格有读数）：
+# 今天记录在案的运行时依赖逐行写清，住址与判据都在这里（P164 那格有读数）：
 #   规矩三条，写在这里是给下一个换机器的人看，不是给文档看：
 #   1) 除下面这四枚以外，脊柱其余部分仍是标准库-only；要再加第五枚，先上板引 P 号。
 #   2) 缺这些库时脊柱照样起：文本类附件（txt/md/py/json/csv/log/yaml/html/js/ts/sql）
@@ -19,6 +19,7 @@
 pypdf==7.0.1           # pai/file_extract.py:20  PDF 取文字（上限 10MB／40 页）
 python-docx==1.2.0     # pai/file_extract.py:29  Word 取段落与表（上限 5 表／30 行）
 openpyxl==3.1.5        # pai/file_extract.py:39  Excel 取格（read_only，上限 5 表／200 行）
+python-pptx==1.0.2     # pai/office_gen.py:47   PPTX 生成（test_office_gen.test_pptx）
 
 # ── 2026-11-17 补：测试环境固化的缺口 ──────────────────────────────────────
 # zhconv 被 pai/poetry_kb.py:13 顶层 import，而 orchestrator.py:29 又导入 poetry_kb，
@@ -45,3 +46,5 @@ apscheduler>=3.10,<4
 # ── 2026-11-24：可选 Qwen-Agent 引擎（默认关闭，设置里切换） ──────────────
 qwen-agent==0.0.34
 soundfile==0.14.0
+tqdm==4.70.1             # qwen_agent/tools/python_executor.py:28 进度条；qwen-agent 未声明这个传递依赖
+python-dateutil==4.0.0   # qwen_agent/tools/python_executor.py:64 DateRuntime

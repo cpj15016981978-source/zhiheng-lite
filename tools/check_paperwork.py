@@ -298,10 +298,15 @@ def _arch_map_for(root):
 
     以前是无条件默认：任何临时树、演练根只要没长着那几片目录，就被判 [H4]「整片不见」，
     等于让每个副本替真实板根背一次红（实测：DS 的 test_paperwork_hygiene 23 条因此红）。
-    显式注入 archive_debt 永远生效，红证明与随包测试走这条；不套用时不许静默，知会一行。
+    这些归档片是本机留底、不进公开仓；干净 clone 不该替投递机背红。
+    显式注入 archive_debt 永远生效，红证明与随包测试走这条；
+    投递机自检可设 PAI_PAPERWORK_REQUIRE_ARCHIVES=1，把缺失判成 [H4]。
+    不套用时不许静默，知会一行。
     """
     p = Path(root).resolve()
-    if p == Path(DEFAULT_ROOT).resolve() or any((p / k.rstrip("/")).is_dir() for k in ARCHIVE_DEBT):
+    require_archives = os.environ.get(
+        "PAI_PAPERWORK_REQUIRE_ARCHIVES", "").strip().lower() in ("1", "on", "true", "yes")
+    if require_archives or any((p / k.rstrip("/")).is_dir() for k in ARCHIVE_DEBT):
         return ARCHIVE_DEBT
     return {}
 
@@ -314,7 +319,7 @@ def run(root=DEFAULT_ROOT, cutoff=SHIP_MOMENT, known_debt=None, archive_debt=Non
     root = Path(root)
     empty_stats = {"files": 0, "checked": 0, "frozen": 0,
                    "debt_total": len(debt_map), "debt_hit": 0, "cutoff": cutoff,
-                   "arch_skipped": len(ARCHIVE_DEBT) if archive_debt is None else 0, "h6_skipped": bool(h6)}
+                   "arch_skipped": len(ARCHIVE_DEBT) if arch_default else 0, "h6_skipped": bool(h6)}
     if not root.exists():
         return ([f"[H4] 扫描根不存在：{root}（整面失效，不等于「没问题」）"], [], [], empty_stats)
     targets = scan_targets(root)

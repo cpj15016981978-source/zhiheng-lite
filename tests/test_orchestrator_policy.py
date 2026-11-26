@@ -18,6 +18,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+WIKI_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "wiki"
 
 from pai.memory import Memory
 from pai.orchestrator import Orchestrator
@@ -82,7 +83,9 @@ class EphemeralTurnPolicy(PolicyBase):
 class WikiTurnPolicy(PolicyBase):
     def test_wiki_context_reaches_prompt(self):
         os.environ["PAI_WIKI"] = "on"
+        os.environ["PAI_WIKI_DIR"] = str(WIKI_FIXTURE)
         self.addCleanup(os.environ.pop, "PAI_WIKI", None)
+        self.addCleanup(os.environ.pop, "PAI_WIKI_DIR", None)
         captured = {}
         original = M10.complete
 
@@ -103,6 +106,8 @@ class RouterTurnPolicy(PolicyBase):
         for k in ("PAI_ROUTER", "PAI_MEMORY_BRAIN", "PAI_WIKI", "PAI_SKILLS", "PAI_CODE_GRAPH"):
             os.environ[k] = "on"
             self.addCleanup(os.environ.pop, k, None)
+        os.environ["PAI_WIKI_DIR"] = str(WIKI_FIXTURE)
+        self.addCleanup(os.environ.pop, "PAI_WIKI_DIR", None)
         captured = {}
         original = M10.complete
 

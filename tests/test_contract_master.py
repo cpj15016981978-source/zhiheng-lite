@@ -7,9 +7,13 @@
 
 这样任何人重新打包把 spine 重置成旧快照，日常 Quick 档立刻抓到。
 """
+import json
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -37,6 +41,28 @@ class ContractMasterTest(unittest.TestCase):
         policies = {c["policy"] for c in self.r["copies"]}
         self.assertIn("mirror", policies)
         self.assertIn("frozen", policies)
+
+    def test_missing_external_mirror_skips_by_default(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "master.txt").write_text("同一份", encoding="utf-8")
+            decl = {
+                "master": {"path": "master.txt"},
+                "copies": [{"path": "missing-mirror.txt", "role": "外部投递面",
+                            "policy": "mirror"}],
+            }
+            (root / C.DEFAULT_MASTER_FILE).write_text(
+                json.dumps(decl, ensure_ascii=False), encoding="utf-8")
+            with mock.patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("PAI_CONTRACT_REQUIRE_MIRRORS", None)
+                r = C.check(*C.load_declaration(str(root)))
+            self.assertEqual(r["fail"], 0)
+            self.assertEqual(r["copies"][0]["status"], "SKIP")
+
+            with mock.patch.dict(os.environ, {"PAI_CONTRACT_REQUIRE_MIRRORS": "1"}):
+                r = C.check(*C.load_declaration(str(root)))
+            self.assertEqual(r["fail"], 1)
+            self.assertEqual(r["copies"][0]["status"], "FAIL")
 
 
 if __name__ == "__main__":

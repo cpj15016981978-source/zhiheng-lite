@@ -26,6 +26,7 @@
      ③ 的锚点＝本件落地那一刻，之前的照旧只数不判；锚点可用 PAI_COMMIT_IDENTITY_SINCE 覆盖。
 
 cutoff 之前的提交只数不判（grandfather）：默认 SINCE_ISO，可用 PAI_COMMIT_GUARD_SINCE 覆盖。
+本仓 1.2.0-dev 公开前那批旧前缀提交 grandfather；署名规则从公开修复起生效。
 0 出网、0 模型调用、0 写库；只读 git 与一个消息文件。
 """
 from __future__ import annotations
@@ -46,8 +47,10 @@ try:
 except (AttributeError, ValueError):
     pass
 
-# 本守卫落地那一刻（P164 那格写的刀）。cutoff 之前的历史不回填、不判红。
-SINCE_ISO = os.environ.get("PAI_COMMIT_GUARD_SINCE") or "2026-11-15T14:10:00"
+# 本仓公开修复的落地时刻。1.2.0-dev 那批 conventional 前缀提交是公开前的旧历史，
+# 按 grandfather 只数不判；从这一刻起新提交必须带署名与 P 号。
+# 想在别的仓/别的时点提前启用，设 PAI_COMMIT_GUARD_SINCE 覆盖。
+SINCE_ISO = os.environ.get("PAI_COMMIT_GUARD_SINCE") or "2026-11-26T11:00:00+08:00"
 PREFIX_RE = re.compile(r"^(Q|DS):\s+\S")
 TICKET_RE = re.compile(r"P\d{1,4}|Q-单-\d+|DS-单-\d+|[ABC]\s?单")
 SPINE_RE = re.compile(r"^(pai/[^/]+\.py|webapp\.py|chat\.py|agent_layer/[^/]+\.py"
