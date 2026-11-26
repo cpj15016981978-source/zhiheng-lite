@@ -20,6 +20,7 @@ MARKER = DATA_DIR / ".migrated"
 WORKSPACE = DATA_DIR / "workspace"
 OFFICE_OUT = DATA_DIR / "office_out"
 BACKUP_DIR = DATA_DIR / "backups"
+INBOX = DATA_DIR / "inbox"
 
 CAPABILITY = {
     "name": "可分发路径",
@@ -37,6 +38,7 @@ def ensure():
     WORKSPACE.mkdir(parents=True, exist_ok=True)
     OFFICE_OUT.mkdir(parents=True, exist_ok=True)
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    INBOX.mkdir(parents=True, exist_ok=True)
     if not MARKER.exists() and LEGACY_DATA.exists() and LEGACY_DATA.resolve() != DATA_DIR.resolve():
         for src in LEGACY_DATA.iterdir():
             if src.name in ("backups", "__pycache__"):

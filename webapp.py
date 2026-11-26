@@ -571,6 +571,11 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"items": out})
         elif self.path == "/api/files/pending":
             self._send(200, {"items": JR.list_file_proposals("pending")})
+        elif self.path == "/api/inbox":
+            try:
+                self._send(200, {"items": FE.list_inbox()})
+            except Exception as e:
+                self._send(500, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
         elif self.path == "/api/credentials":
             try:
                 self._send(200, {"providers": PR.status().get("providers", []),
@@ -2064,6 +2069,16 @@ class Handler(BaseHTTPRequestHandler):
                     JR.approve(j["id"], "Boss")
                     out = JW.run_once(dry_run=False)
                     self._send(200, {"ok": True, "job": JR.get(j["id"]), "result": out})
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/inbox/ingest":
+                if not self._ui_gate():
+                    return
+                try:
+                    name, content, chars = FE.ingest_inbox(str(payload.get("name") or ""))
+                    out = JR.create_file_proposal(name, content)
+                    self._send(200, {"ok": True, "chars": chars, "proposal": out})
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return

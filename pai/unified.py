@@ -370,6 +370,21 @@ def _misc(text, mem=None):
                 return "视觉/OCR 都失败：%s" % e
     if text in ("文件审批", "待批文件"):
         return "文件审批：http://127.0.0.1:8753/files"
+    if text in ("文档导入", "收件箱"):
+        from pai import file_extract as FE
+        rows = FE.list_inbox()
+        if not rows:
+            return "收件箱为空：把文件放到 %s" % __import__("pai.paths", fromlist=["INBOX"]).INBOX
+        return "收件箱：\n" + "\n".join("- %s（%dKB）" % (x["name"], x["size"] // 1024) for x in rows[:20])
+    m = re.match(r"^导入文档[:：]\s*(.+)$", text)
+    if m:
+        from pai import file_extract as FE, job_runner as JR
+        try:
+            name, content, chars = FE.ingest_inbox(m.group(1).strip())
+            out = JR.create_file_proposal(name, content)
+            return "已转成待审批：%s（%d 字）\nhttp://127.0.0.1:8753/files" % (out["filename"], chars)
+        except Exception as e:
+            return "导入失败：%s" % e
     m = re.match(r"^写文件[:：]\s*(\S+)\s+(.+)$", text)
     if m:
         from pai import job_runner as JR

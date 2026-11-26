@@ -110,3 +110,50 @@ def extract(name, data):
         pass
     return text[:MAX_CHARS]
 
+
+
+
+INGEST_EXTS = (".txt", ".md", ".csv", ".json", ".html", ".pdf",
+               ".docx", ".xlsx", ".xlsm", ".pptx")
+
+
+def _safe_inbox_name(name):
+    name = str(name or "").strip().replace("\\", "/")
+    if not name or "/" in name or name.startswith(".") or ".." in name:
+        raise ExtractError("文件名不合法")
+    if pathlib.Path(name).suffix.lower() not in INGEST_EXTS:
+        raise ExtractError("不支持的格式")
+    return name
+
+
+def list_inbox(root=None):
+    from pai import paths
+    d = pathlib.Path(root) if root is not None else paths.INBOX
+    if not d.is_dir():
+        return []
+    out = []
+    for p in sorted(d.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+        if not p.is_file():
+            continue
+        try:
+            name = _safe_inbox_name(p.name)
+        except ExtractError:
+            continue
+        out.append({"name": name, "size": p.stat().st_size,
+                    "mtime": int(p.stat().st_mtime)})
+    return out
+
+
+def ingest_inbox(filename, root=None):
+    """把 inbox 文件转成 Markdown 文本，返回 (out_name, content, chars)。不落 ws。"""
+    from pai import paths
+    name = _safe_inbox_name(filename)
+    d = pathlib.Path(root) if root is not None else paths.INBOX
+    p = d / name
+    if not p.is_file():
+        raise ExtractError("收件箱里没有这个文件")
+    text = extract(name, p.read_bytes())
+    content = "# 导入：%s\n\n%s\n" % (name, text[:MAX_CHARS])
+    stem = pathlib.Path(name).stem
+    out_name = (stem or "import") + ".md"
+    return out_name, content, len(text)
