@@ -558,6 +558,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(500, {"error": name + " 缺失"})
             else:
                 self._send(200, self._html(body), "text/html; charset=utf-8")
+        elif self.path == "/v1/models":
+            self._send(200, {"object": "list", "data": [{"id": M10.active_provider(), "object": "model", "owned_by": "zhiheng"}]})
+        elif self.path == "/v1/status":
+            self._send(200, {"ok": True, "model": M10.active_provider(), "approval_mode": os.environ.get("PAI_APPROVAL_MODE", "ledger")})
         elif self.path == "/api/plans":
             out = []
             for p in JR.list_plans(20):
@@ -1169,6 +1173,39 @@ class Handler(BaseHTTPRequestHandler):
             self._send(code, {"error": err})
             return
         try:
+            if self.path == "/v1/chat/completions":
+                key = os.environ.get("PAI_LOCAL_API_KEY", "").strip()
+                if key and self.headers.get("Authorization", "") != ("Bearer " + key):
+                    self._send(401, {"error": {"message": "invalid api key", "type": "authentication_error"}})
+                    return
+                msgs = payload.get("messages") or []
+                parts = []
+                for m in msgs:
+                    role = str((m or {}).get("role") or "user")
+                    content = (m or {}).get("content") or ""
+                    if isinstance(content, list):
+                        content = "".join(str(x.get("text") or "") if isinstance(x, dict) else str(x) for x in content)
+                    parts.append("%s: %s" % (role, content))
+                prompt = "\n".join(parts).strip()
+                if not prompt:
+                    self._send(400, {"error": {"message": "messages is empty", "type": "invalid_request_error"}})
+                    return
+                try:
+                    out = M10.complete(prompt, opts={"temperature": float(payload.get("temperature", 0.3)),
+                                                     "max_tokens": int(payload.get("max_tokens") or 900)})
+                    text = str((out[0] or {}).get("output") or "") if out else ""
+                except Exception as e:
+                    self._send(500, {"error": {"message": "%s: %s" % (type(e).__name__, e), "type": "server_error"}})
+                    return
+                model = str(payload.get("model") or M10.active_provider())
+                self._send(200, {"id": "chatcmpl-%s" % uuid.uuid4().hex[:16], "object": "chat.completion",
+                                 "created": int(time.time()), "model": model,
+                                 "choices": [{"index": 0, "message": {"role": "assistant", "content": text},
+                                              "finish_reason": "stop"}],
+                                 "usage": {"prompt_tokens": max(1, len(prompt) // 2),
+                                           "completion_tokens": max(1, len(text) // 2),
+                                           "total_tokens": max(1, (len(prompt) + len(text)) // 2)}})
+                return
             if self.path == "/api/events":
                 text = str(payload.get("text") or "").strip()
                 if not text:
