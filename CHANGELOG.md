@@ -10,6 +10,12 @@
 - 测试：`tests/test_v22.py` 新增第 5 节 14 项（标准形状、Issue 文字直达、校验与错误、models/status、回环绑定），本机无可选依赖环境 65/65 通过；另用真实 Issue #1 全文走了一次标准接口（桩模型），10/10 通过（Issue 直达、记忆两条、代码块存进 scripts/、models/status 正常）。
 - 边界：本机实测用的是桩模型（只 stub 掉模型调用，其余全是真实代码）；真机 Ollama / 真调免费 API 仍待在用户电脑上验证。
 
+## 2026-11-26 修复：Issue #1 Shift+Enter 会直接发送
+
+- 对话输入框 keydown 加一行：`Enter && shiftKey` 时直接返回，不发送（单行输入框，没有换行可插，就只不发送）。搜索框与任务目标框的 Enter 处理顺手加了同样的 `!shiftKey` 判断。
+- 验证：Node 脚本抽 index.txt 三处处理函数原文跑了 11 项用例（组字中 / isComposing / keyCode 229 / Shift+Enter 不发送；普通 Enter 与组字结束后 Enter 正常发送；空输入不发送；搜索框与任务框各 2 项），11/11 通过。新增 `tests/test_ime_guard.py`（5 项静态检查，离线可跑）把守卫钉住。
+- 注意：main（知衡）那边的聊天 UI（web/chat.html、web/app.js、dashboard.html、webapp.py）本来就有 `!shiftKey` 守卫，还有 tests/test_web_ime_guard.py 钉着，所以 Issue #1 只修 LowSpec 这边，main 不用动。
+
 ## 新增
 
 1. **记忆语义搜索**（思路学 sqlite-vec，Apache-2.0）

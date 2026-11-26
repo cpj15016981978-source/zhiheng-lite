@@ -238,6 +238,7 @@ input.addEventListener('compositionstart', function(){ composing = true; });
 input.addEventListener('compositionend', function(){ composing = false; });
 input.addEventListener('keydown', function(e){
   if (composing || e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Enter' && e.shiftKey) return;
   if (e.key === 'Enter') send();
 });
 async function loadMemories(q){
@@ -262,7 +263,7 @@ return '<div class="card"><span class="tag ' + t[1] + '">' + esc(t[0]) + '</span
 }).join('');
 }
 $('#search-btn').addEventListener('click', function(){ loadMemories($('#search-input').value.trim()); });
-$('#search-input').addEventListener('keydown', function(e){ if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') loadMemories(e.target.value.trim()); });
+$('#search-input').addEventListener('keydown', function(e){ if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter' && !e.shiftKey) loadMemories(e.target.value.trim()); });
 $('#memory-refresh').addEventListener('click', function(){ $('#search-input').value = ''; loadMemories(); });
 async function loadTasks(){
 var r = await fetch('/api/tasks'); var j = await r.json();
@@ -464,7 +465,7 @@ alert('生成计划失败：' + (j.error || '未知错误'));
 btn.disabled = false;
 btn.textContent = '生成计划';
 });
-$('#plan-goal').addEventListener('keydown', function(e){ if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') $('#plan-create').click(); });
+$('#plan-goal').addEventListener('keydown', function(e){ if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter' && !e.shiftKey) $('#plan-create').click(); });
 async function loadPending(){
 var r = await fetch('/api/pending'); var j = await r.json();
 var list = $('#pending-list');
