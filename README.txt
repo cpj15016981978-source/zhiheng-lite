@@ -5,6 +5,8 @@
 
 平台与依赖（先看这段）
 --------
+- 推荐启动：双击 `start.bat`（ASCII 文件名，zipball 下载不会乱码）；接真实模型用 `start-live.bat`，双模型用 `start-dual.bat`。
+- 启动门禁 `preflight` 失败时改为警告并继续降级启动，不再直接卡住双击入口。
 - 仅支持 Windows。代码使用 DPAPI、WINFUNCTYPE、PowerShell、注册表等 Windows 能力。
 - 没有跨平台承诺；macOS/Linux 需要另开移植，不是当前分支的目标。
 - 不是“零第三方依赖”。实际运行时依赖见 requirements.txt：

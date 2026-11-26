@@ -23,9 +23,9 @@ from tools import check_key                                  # 复用同一份�
 
 PROVIDER = "openai"                                          # ★协议名，不是公司名（ADR-041）
 BASE_URL = "https://api.minimaxi.com/v1"                     #   这台 2026-10-21 验通过的端点
-MODEL_NAME = "MiniMax-M3.1-Flash"                            # Boss 2026-10-22 定：切 Flash（1.0/4.0）
+MODEL_NAME = "MiniMax-M3"                            # 已验证的同端点模型；Flash 未验通
                                                              # ★Flash 在这个端点上【还没验通】，
-                                                             #   验通的是同端点的 MiniMax-M3
+                                                             #   默认使用已验证的 MiniMax-M3
 
 
 def read_key(prompt=""):
