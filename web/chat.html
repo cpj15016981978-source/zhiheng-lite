@@ -134,6 +134,8 @@
     background: var(--panel2); color: var(--accent);
   }
   .msg.user .avatar { background: #24414a; color: var(--paper); }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+  .empty-avatar { width: 92px; height: 92px; object-fit: cover; border-radius: 24px; display: block; margin: 0 auto 14px; border: 1px solid var(--line); }
   .body { min-width: 0; flex: 1; position: relative; display: flex; flex-direction: column; align-items: flex-start; }
   .msg.user .body { align-items: flex-end; }
   .who { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
@@ -391,6 +393,7 @@
     <section class="messages" id="messages">
       <div id="briefCard" class="brief-card" hidden></div>
       <div class="empty" id="empty">
+        <img class="empty-avatar" src="/m1/magician-avatar.png" alt="魔法师" />
         <h1>在的，慢慢说。</h1>
         <p>可以聊事情、理思路、写东西，也可以让我查记忆和任务。</p>
         <div class="chips">
@@ -1019,7 +1022,7 @@
     for (const m of s.messages) {
       const row = document.createElement('div');
       row.className = 'msg ' + (m.role === 'user' ? 'user' : 'ai');
-      row.innerHTML = '<div class="avatar">' + (m.role === 'user' ? '你' : '中') + '</div>' +
+      row.innerHTML = '<div class="avatar">' + (m.role === 'user' ? '你' : '<img src="/m1/magician-avatar.png" alt="" />') + '</div>' +
         '<div class="body"><div class="who">' + (m.role === 'user' ? '你' : '时中') +
         (m.tool ? '<span class="toolbadge">工具：' + escapeHtml(m.tool) + '</span>' : '') + '</div>' +
         '<button class="msgquote" title="引用这条消息">引用</button>' +
@@ -2798,7 +2801,6 @@
   stopBtn.onclick = stop;
   inputEl.addEventListener('input', autoGrow);
   inputEl.addEventListener('keydown', (e) => {
-    if (e.isComposing || e.keyCode === 229 || e.key === 'Process') return;
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   });
   document.addEventListener('click', (e) => {
