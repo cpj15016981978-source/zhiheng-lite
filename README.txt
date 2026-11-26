@@ -7,6 +7,7 @@
 --------
 - 本地 OpenAI 兼容口：`POST /v1/chat/completions`、`GET /v1/models`、`GET /v1/status`，仅回环；标准客户端可直接接 `http://127.0.0.1:8753`。
 - 推荐启动：双击 `start.bat`（ASCII 文件名，zipball 下载不会乱码）；接真实模型用 `start-live.bat`，双模型用 `start-dual.bat`。
+- 独立窗口：双击 `start-window.bat`，用 Edge/Chrome 的 `--app` 打开，无地址栏；本质仍是本地网页窗口。
 - 启动门禁 `preflight` 失败时改为警告并继续降级启动，不再直接卡住双击入口。
 - 仅支持 Windows。代码使用 DPAPI、WINFUNCTYPE、PowerShell、注册表等 Windows 能力。
 - 没有跨平台承诺；macOS/Linux 需要另开移植，不是当前分支的目标。
