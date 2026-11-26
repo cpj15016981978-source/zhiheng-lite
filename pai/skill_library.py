@@ -23,7 +23,7 @@ CAPABILITY = {
     "default_on": False,
     "stores_user_text": False,
     "network": False,
-    "degrade": "关态返回空；开态只读 skills/ 下的 SKILL.json / SKILL.md，不执行、不调模型、不出网",
+    "degrade": "PAI_SKILLS 关态：用户技能不加载；内置只读技能仍可匹配（自动注入）；开态同时加载用户技能",
     "probe_cost": "只读模块常量与文件",
     "approval": "未获单独批准；由调用方显式开启，不自动加载",
 }
@@ -60,9 +60,11 @@ class SkillLibrary:
 
     def _dirs(self):
         out = []
+        seen_bases = set()
         for base in (self.root, BUILTIN_ROOT):
-            if not base.exists() or base in [x[0] for x in out]:
+            if not base.exists() or base in seen_bases:
                 continue
+            seen_bases.add(base)
             out.extend((p, base == BUILTIN_ROOT) for p in sorted(base.iterdir())
                        if p.is_dir() and not p.name.startswith("_"))
         return [(p, builtin) for p, builtin in out if (p / "SKILL.json").exists() or (p / "SKILL.md").exists()]
@@ -181,6 +183,8 @@ class SkillLibrary:
 
     def approve(self, name, by="boss"):
         s = self.load(name, allow_draft=True)
+        if s.get("_builtin"):
+            raise SkillError("内置技能只读；不能 approve")
         self._snapshot(s)
         s["status"] = "approved"
         s["approved_by"] = by

@@ -839,8 +839,13 @@ class Memory:
             else:
                 semantic_rows = []
             for it in semantic_rows:
-                add("semantic", it.get("text") or it.get("summary"), "semantic",
-                    it.get("created_at"), 0.7,
+                rel = float(it.get("relevance") or 0)
+                text = str(it.get("text") or it.get("summary") or "")
+                lexical = any(t and t in text.lower() for t in tokens)
+                if rel < 0.15 and not lexical:
+                    continue
+                add("semantic", text, "semantic",
+                    it.get("created_at"), rel,
                     {"tags": it.get("tags"), "relevance": it.get("relevance")})
         except Exception:
             pass

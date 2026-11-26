@@ -179,7 +179,7 @@ document.getElementById('f').addEventListener('submit',function(e){
   e.preventDefault();var t=document.getElementById('t');var v=t.value.trim();
   if(!v)return;t.value='';submit(v);});
 document.getElementById('t').addEventListener('keydown',function(e){
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();
+  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();
   document.getElementById('f').dispatchEvent(new Event('submit'));}});
 refresh();
 </script></body></html>

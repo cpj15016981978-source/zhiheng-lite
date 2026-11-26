@@ -98,6 +98,8 @@ def extract(name, data):
             raise ExtractError("暂不支持：%s" % (ext or "无扩展名"))
     except ExtractError:
         raise
+    except ImportError as e:
+        raise ExtractError("解析失败：缺少可选依赖 %s" % (getattr(e, "name", None) or "（未知）"))
     except Exception as e:
         raise ExtractError("解析失败：%s" % type(e).__name__)
     text = (text or "").strip()

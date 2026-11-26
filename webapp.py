@@ -271,6 +271,8 @@ def _skill_rule(text):
             return ""
         sk = hits[0]
         body = str(sk.get("_body") or "").strip()
+        if body.startswith("---") and body.count("---") >= 2:
+            body = body.split("---", 2)[2].lstrip()
         # 只注入命中的一个技能，截断，避免把技能库整本塞进提示词。
         body = body[:1800]
         return "[本轮技能：%s]\n%s" % (sk.get("name") or "skill", body)
@@ -1043,15 +1045,19 @@ class Handler(BaseHTTPRequestHandler):
             q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             query = str((q.get("q") or [""])[0]).strip()
             mode = str((q.get("mode") or ["hybrid"])[0]).strip().lower()
+            from pai import embedding as EMB
             if mode == "semantic":
                 rows = mem.recall_items_semantic(query, 10) if query else []
-                self._send(200, {"ok": True, "mode": "semantic", "query": query, "items": [
+                self._send(200, {"ok": True, "mode": "semantic", "query": query,
+                                 "backend": EMB.backend(), "items": [
                     {"kind": "semantic", "text": x.get("text") or x.get("summary") or "",
                      "source": "semantic", "score": x.get("relevance", 0),
                      "tags": x.get("tags")} for x in rows]})
             else:
-                self._send(200, {"ok": True, **mem.hybrid_search(
-                    query, convs, PF.current(), 10, include_semantic=(mode != "keyword"))})
+                data = mem.hybrid_search(query, convs, PF.current(), 10,
+                                         include_semantic=(mode != "keyword"))
+                data["backend"] = EMB.backend()
+                self._send(200, {"ok": True, **data})
         elif self.path == "/api/tasks":
             prof = PF.current()
             self._send(200, {"profile": prof,
@@ -1206,7 +1212,19 @@ class Handler(BaseHTTPRequestHandler):
                 if key and self.headers.get("Authorization", "") != ("Bearer " + key):
                     self._send(401, {"error": {"message": "invalid api key", "type": "authentication_error"}})
                     return
-                msgs = payload.get("messages") or []
+                msgs = payload.get("messages")
+                if not isinstance(msgs, list) or not msgs:
+                    self._send(400, {"error": {"message": "messages must be a non-empty list", "type": "invalid_request_error"}})
+                    return
+                if payload.get("stream") is True:
+                    self._send(400, {"error": {"message": "stream is not supported", "type": "invalid_request_error"}})
+                    return
+                try:
+                    temperature = float(payload.get("temperature", 0.3))
+                    max_tokens = int(payload.get("max_tokens") or 900)
+                except (TypeError, ValueError):
+                    self._send(400, {"error": {"message": "temperature/max_tokens must be numeric", "type": "invalid_request_error"}})
+                    return
                 parts = []
                 for m in msgs:
                     role = str((m or {}).get("role") or "user")
@@ -1219,8 +1237,8 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(400, {"error": {"message": "messages is empty", "type": "invalid_request_error"}})
                     return
                 try:
-                    out = M10.complete(prompt, opts={"temperature": float(payload.get("temperature", 0.3)),
-                                                     "max_tokens": int(payload.get("max_tokens") or 900)})
+                    out = M10.complete(prompt, opts={"temperature": temperature,
+                                                     "max_tokens": max_tokens})
                     text = str((out[0] or {}).get("output") or "") if out else ""
                 except Exception as e:
                     self._send(500, {"error": {"message": "%s: %s" % (type(e).__name__, e), "type": "server_error"}})

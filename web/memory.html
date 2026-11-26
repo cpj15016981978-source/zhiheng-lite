@@ -66,7 +66,8 @@ async function search(){
   const q=$('#q').value.trim(); if(!q) return;
   const mode=$('#mode').value;
   const d=await (await fetch('/api/memory/search?mode='+encodeURIComponent(mode)+'&q='+encodeURIComponent(q))).json();
-  $('#results').innerHTML=(d.items||[]).map(x=>`<div class="result"><b>${esc(x.source)} / ${esc(x.kind)} · ${x.score}</b><div class="txt">${esc(x.text)}</div></div>`).join('')||'<div class="muted">没有命中</div>';
+  const note=d.backend==='local-hash'?'<div class="muted">当前未接嵌入模型，语义为 local-hash 模糊匹配，不是真语义。</div>':'';
+  $('#results').innerHTML=note+(d.items||[]).map(x=>`<div class="result"><b>${esc(x.source)} / ${esc(x.kind)} · ${x.score}</b><div class="txt">${esc(x.text)}</div></div>`).join('')||'<div class="muted">没有命中</div>';
 }
 async function classify(){
   const r=await fetch('/api/memory/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});

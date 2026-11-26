@@ -55,7 +55,7 @@ def embed(texts):
     if key:
         headers["Authorization"] = "Bearer " + key
     req = urllib.request.Request(base + "/embeddings", data=body, method="POST", headers=headers)
-    with urllib.request.urlopen(req, timeout=float(os.environ.get("PAI_EMBED_TIMEOUT", "8"))) as r:
+    with urllib.request.urlopen(req, timeout=float(os.environ.get("PAI_EMBED_TIMEOUT", "30"))) as r:
         data = json.loads(r.read().decode("utf-8"))
     vectors = [row["embedding"] for row in data.get("data", [])]
     if len(vectors) != len(texts):

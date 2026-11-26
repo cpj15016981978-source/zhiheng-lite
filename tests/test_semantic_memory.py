@@ -23,10 +23,11 @@ class SemanticMemoryTest(unittest.TestCase):
         self.assertTrue(rows)
         self.assertIn("周报", rows[0].get("text", ""))
 
-    def test_hybrid_contains_semantic(self):
+    def test_hybrid_does_not_return_irrelevant_semantic_junk(self):
         out = self.mem.hybrid_search("周报", limit=10)
-        self.assertTrue(out["items"])
-        self.assertTrue(any(x.get("source") == "semantic" for x in out["items"]))
+        texts = [x.get("text", "") for x in out["items"]]
+        self.assertTrue(any("周报" in t for t in texts))
+        self.assertFalse(any("合同" in t for t in texts), "无关的语义行不应混进来")
 
 
 if __name__ == "__main__":
