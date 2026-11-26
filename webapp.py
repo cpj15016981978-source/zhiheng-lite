@@ -157,6 +157,14 @@ def _agentd_call(path, payload):
         return 502, {"ok": False, "error": "agentd 不可用：%s" % type(e).__name__}
 
 AGENTD_URL = os.environ.get("PAI_AGENTD_URL", "http://127.0.0.1:8766")
+
+
+def _agentd_available():
+    try:
+        with urllib.request.urlopen(AGENTD_URL.rstrip("/") + "/health", timeout=0.5) as r:
+            return r.status == 200
+    except Exception:
+        return False
 UI_NONCE = secrets.token_urlsafe(32)
 STARTUP_REPORT = {}
 
@@ -694,6 +702,7 @@ class Handler(BaseHTTPRequestHandler):
                              "version": _version(),
                              "db": str(db_path), "db_exists": Path(db_path).exists(),
                              "agentd": AGENTD_URL,
+                             "agentd_available": _agentd_available(),
                              "approval_mode": (os.environ.get("PAI_APPROVAL_MODE") or "ledger"),
                              "startup": dict(STARTUP_REPORT)})
         elif self.path == "/api/reminders/pending":

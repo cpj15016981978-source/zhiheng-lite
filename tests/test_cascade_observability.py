@@ -127,7 +127,7 @@ class Stats(unittest.TestCase):
 
     def test_load_records_skips_bad_lines(self):
         with tempfile.TemporaryDirectory() as d:
-            p = pathlib.Path(d) / "trace-20261118.jsonl"
+            p = pathlib.Path(d) / ("trace-%s.jsonl" % __import__("datetime").date.today().strftime("%Y%m%d"))
             good = json.dumps(_rec("simple", True, "qwen2.5:1.5b"), ensure_ascii=False)
             p.write_text(good + "\n{bad json\n\n", encoding="utf-8")
             got = CS.load_records(d, days=7)

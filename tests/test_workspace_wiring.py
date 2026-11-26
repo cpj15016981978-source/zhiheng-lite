@@ -24,7 +24,7 @@ class WiringTest(unittest.TestCase):
         self.mem.close()
 
     def _run(self, enabled, selected):
-        with mock.patch.dict(os.environ, {"PAI_CASCADE_ROUTE": "0", "PAI_HYBRID": "0"}, clear=False):
+        with mock.patch.dict(os.environ, {"PAI_CASCADE_ROUTE": "0", "PAI_HYBRID": "0", "PAI_AGENT_ENGINE": "builtin"}, clear=False):
             with mock.patch("pai.orchestrator.WS.backend", return_value=("on" if enabled else "off")):
                 with mock.patch("pai.orchestrator.WS.select",
                                 return_value={"selected": selected, "dropped": [], "budget": 7}) as sel:

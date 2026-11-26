@@ -54,9 +54,11 @@ class WebCase(unittest.TestCase):
 
 class TestLoopbackOnly(WebCase):
     def test_page_serves_on_localhost(self):
-        status, html = request(self.port, "GET", "/")
+        status, _ = request(self.port, "GET", "/")
+        self.assertEqual(302, status, "根路径应 302 到 /chat")
+        status, html = request(self.port, "GET", "/chat")
         self.assertEqual(200, status)
-        self.assertIn("个人AI系统", html)
+        self.assertIn("时中", html)
 
     def test_foreign_host_header_is_rejected(self):
         """DNS rebinding / CSRF：浏览器把 Host 换成外域，必须 403 而不是照常服务。"""

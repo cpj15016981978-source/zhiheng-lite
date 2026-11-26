@@ -12,7 +12,16 @@ import pathlib
 import re
 import sqlite3
 
-import zhconv
+try:
+    import zhconv
+except ImportError:
+    # 可选依赖：缺失时诗词库仍可启动，只是不做简繁转换。
+    class _IdentityZhconv:
+        @staticmethod
+        def convert(text, _locale):
+            return str(text)
+
+    zhconv = _IdentityZhconv()
 
 CAPABILITY = {
     "name": "诗词知识库",
