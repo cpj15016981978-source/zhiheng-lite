@@ -28,13 +28,11 @@ jobs:
         run: python tools/gates.py --tier contract
       - name: Run backend regression
         timeout-minutes: 8
-        run: >-
-          python -m unittest
-          tests.test_approval_boundary
-          tests.test_agent_step
-          tests.test_plan_loop
-          tests.test_productization
-          tests.test_webapp_aliases
-          tests.test_low_spec_resources
-          tests.test_console_encoding
-          tests.test_web_client
+        shell: pwsh
+        run: |
+          python -m unittest tests.test_approval_boundary tests.test_agent_step tests.test_plan_loop tests.test_productization tests.test_webapp_aliases tests.test_low_spec_resources tests.test_console_encoding tests.test_web_client 2>&1 | Tee-Object -FilePath ci-tests.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Get-Content ci-tests.log | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            exit $code
+          }
