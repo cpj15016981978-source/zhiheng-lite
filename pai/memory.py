@@ -794,7 +794,7 @@ class Memory:
                               "weight": int(f.get("confidence") or 1)})
         return {"nodes": nodes, "edges": edges, "facts": len(facts)}
 
-    def hybrid_search(self, query, conv_store=None, profile="", limit=10):
+    def hybrid_search(self, query, conv_store=None, profile="", limit=10, include_semantic=True):
         q = str(query or "").strip()
         if not q:
             return {"query": q, "items": []}
@@ -832,6 +832,18 @@ class Memory:
         for it in self.recall_items(q, k=max(limit, 8)) or []:
             add("memory_item", it.get("text") or it.get("summary"), "memory_item",
                 it.get("created_at"), 0.5, {"tags": it.get("tags")})
+        # 可选语义召回：没配 BGE/HTTP 时 embedding 用 local-hash，失败自动回退。
+        try:
+            if include_semantic:
+                semantic_rows = self.recall_items_semantic(q, k=max(limit, 8)) or []
+            else:
+                semantic_rows = []
+            for it in semantic_rows:
+                add("semantic", it.get("text") or it.get("summary"), "semantic",
+                    it.get("created_at"), 0.7,
+                    {"tags": it.get("tags"), "relevance": it.get("relevance")})
+        except Exception:
+            pass
         if conv_store is not None:
             try:
                 for m in conv_store.search_messages(profile, q, limit=max(limit, 8)):

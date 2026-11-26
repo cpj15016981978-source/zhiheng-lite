@@ -1042,7 +1042,16 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path.startswith("/api/memory/search"):
             q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             query = str((q.get("q") or [""])[0]).strip()
-            self._send(200, {"ok": True, **mem.hybrid_search(query, convs, PF.current(), 10)})
+            mode = str((q.get("mode") or ["hybrid"])[0]).strip().lower()
+            if mode == "semantic":
+                rows = mem.recall_items_semantic(query, 10) if query else []
+                self._send(200, {"ok": True, "mode": "semantic", "query": query, "items": [
+                    {"kind": "semantic", "text": x.get("text") or x.get("summary") or "",
+                     "source": "semantic", "score": x.get("relevance", 0),
+                     "tags": x.get("tags")} for x in rows]})
+            else:
+                self._send(200, {"ok": True, **mem.hybrid_search(
+                    query, convs, PF.current(), 10, include_semantic=(mode != "keyword"))})
         elif self.path == "/api/tasks":
             prof = PF.current()
             self._send(200, {"profile": prof,

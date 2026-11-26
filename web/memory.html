@@ -35,7 +35,7 @@ input{width:70%}button{background:var(--accent);color:#06231d;border:0;font-weig
   <div class="card">
     <h2>混合检索</h2>
     <div class="muted">记忆事实 + 记忆条目 + 全部聊天记录，按关键词/时间/语义基础分排序。</div>
-    <div style="display:flex;gap:8px;margin-top:10px"><input id="q" placeholder="例如：报价 假设 / 会议 待办"><button onclick="search()">搜索</button></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><input id="q" placeholder="例如：报价 假设 / 会议 待办"><select id="mode"><option value="hybrid">混合</option><option value="keyword">关键词</option><option value="semantic">语义</option></select><button onclick="search()">搜索</button></div>
     <div id="results" style="margin-top:12px"></div>
   </div>
   <div class="card">
@@ -64,7 +64,8 @@ async function load(){
 }
 async function search(){
   const q=$('#q').value.trim(); if(!q) return;
-  const d=await (await fetch('/api/memory/search?q='+encodeURIComponent(q))).json();
+  const mode=$('#mode').value;
+  const d=await (await fetch('/api/memory/search?mode='+encodeURIComponent(mode)+'&q='+encodeURIComponent(q))).json();
   $('#results').innerHTML=(d.items||[]).map(x=>`<div class="result"><b>${esc(x.source)} / ${esc(x.kind)} · ${x.score}</b><div class="txt">${esc(x.text)}</div></div>`).join('')||'<div class="muted">没有命中</div>';
 }
 async function classify(){
