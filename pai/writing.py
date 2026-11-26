@@ -40,7 +40,7 @@ def build_prompt(task="draft", topic="", audience="", tone="", length="",
     if not topic:
         raise ValueError("缺主题")
     parts = [
-        "你是时中。请完成一个写作任务。",
+        "你是月白。请完成一个写作任务。",
         "任务：%s" % TASKS[task],
         "主题：%s" % topic,
         "读者：%s" % (audience or "不指定"),

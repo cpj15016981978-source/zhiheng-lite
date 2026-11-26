@@ -27,7 +27,7 @@ def _load_desktop_persona():
 class PersonaPromptTest(unittest.TestCase):
     def test_prompt_block_has_persona(self):
         block = P.prompt_block()
-        # 品牌断言绑定真源常量，改名时不改测试（避免"不要自称时中"这类句子造成的假通过）
+        # 品牌断言绑定真源常量，改名时不改测试（避免"不要自称月白"这类句子造成的假通过）
         for word in (P.NAME, P.FORM, P.STYLE[0], P.STYLE[3]):
             self.assertIn(word, block)
 

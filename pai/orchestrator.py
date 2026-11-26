@@ -998,7 +998,7 @@ class Orchestrator:
                         "trace": {"engine": "qwen_agent", "error": str(e)}}
 
         if _looks_identity(text):
-            msg = "我是时中，运行在知衡里。知衡是这个 app，时中是我。"
+            msg = "我是月白，运行在知衡里。知衡是这个 app，月白是我。"
             return {"response": msg, "trace": {
                 "recalled": [], "culture_refs": [], "reason": msg,
                 "is_recall": False, "is_reason": False, "principles_used": [],

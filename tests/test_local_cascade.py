@@ -106,14 +106,14 @@ class Complete(unittest.TestCase):
                 return "simple", 1, 1
             return "短答", 3, 2
 
-        full = ("[人格 · 时中 / 知衡]\n你急的时候，我先稳住\n"
+        full = ("[人格 · 月白 / 知衡]\n你急的时候，我先稳住\n"
                 "[对方此刻的情绪基调（系统内部估计 · 功能态，不是诊断）]\n"
                 "- 基调：平静\n[用户] 你好呀")
         out = LC.complete(full, user_text="你好呀", call=call)
         small_prompts = [p for m, p in seen if m == LC.SMALL_MODEL()]
         self.assertEqual(len(small_prompts), 1)
         p = small_prompts[0]
-        self.assertNotIn("人格 · 时中", p)
+        self.assertNotIn("人格 · 月白", p)
         self.assertNotIn("情绪基调", p)
         self.assertNotIn("我先稳住", p)
         self.assertIn("快答档", p)

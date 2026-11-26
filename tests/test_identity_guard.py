@@ -9,7 +9,7 @@ class IdentityTest(unittest.TestCase):
         o = object.__new__(O.Orchestrator)
         out = o.handle("你叫什么名字？这个 app 叫什么？")
         text = out["response"]
-        self.assertIn("时中", text)
+        self.assertIn("月白", text)
         self.assertIn("知衡", text)
         self.assertNotIn("Qwen", text)
 

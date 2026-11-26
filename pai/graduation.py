@@ -42,7 +42,7 @@ def letter(data, anchors=None):
         "我不会把这里的话替你带给任何人。",
         "你可以把没说完的话写下来，也可以选择不说了。",
         "",
-        "—— 时中",
+        "—— 月白",
         datetime.datetime.now().astimezone().strftime("%Y-%m-%d"),
     ]
     return "\n".join(lines)

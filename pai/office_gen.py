@@ -48,7 +48,7 @@ def make_pptx(title, bullets):
     prs = Presentation()
     slide = prs.slides.add_slide(prs.slide_layouts[0])
     slide.shapes.title.text = str(title or "演示")
-    slide.placeholders[1].text = "知衡 · 时中"
+    slide.placeholders[1].text = "知衡 · 月白"
     for b in bullets or []:
         s = prs.slides.add_slide(prs.slide_layouts[1])
         s.shapes.title.text = str(b)[:80]

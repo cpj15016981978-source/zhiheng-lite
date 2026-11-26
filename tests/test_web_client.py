@@ -58,7 +58,7 @@ class TestLoopbackOnly(WebCase):
         self.assertEqual(302, status, "根路径应 302 到 /chat")
         status, html = request(self.port, "GET", "/chat")
         self.assertEqual(200, status)
-        self.assertIn("时中", html)
+        self.assertIn("月白", html)
 
     def test_foreign_host_header_is_rejected(self):
         """DNS rebinding / CSRF：浏览器把 Host 换成外域，必须 403 而不是照常服务。"""

@@ -32,7 +32,7 @@ LEGAL_NEXT = {
     "succeeded": (),
     "cancelled": (),
 }
-# 批准位只认这两个（板上规矩：时中永远 read，不给自己批自己的写）。
+# 批准位只认这两个（板上规矩：月白永远 read，不给自己批自己的写）。
 APPROVERS = ("boss", "qoder")
 
 CAPABILITY = {

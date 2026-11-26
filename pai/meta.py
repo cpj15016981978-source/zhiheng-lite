@@ -88,7 +88,7 @@ def project_answer() -> str:
     return """当前主线：知衡。
 
 产品：知衡
-AI 人格：时中
+AI 人格：月白
 阶段：A 每天敢用 → B 自己会做事 → C 可测的自我
 
 最近已完成：

@@ -98,7 +98,7 @@ def complete(prompt, on_delta=None, user_text=None, smart=False):
 
     final_prompt = (
         "%s\n\n[双脑审稿意见]\n%s\n\n"
-        "请基于审稿意见给出最终回答。保持原本的时中口吻和事实边界；"
+        "请基于审稿意见给出最终回答。保持原本的月白口吻和事实边界；"
         "不要提“审稿”“草稿”“双脑”这些过程词。"
         % (prompt, review or "（审稿模型不可用，请自行复核）")
     )

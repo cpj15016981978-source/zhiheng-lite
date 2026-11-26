@@ -133,7 +133,7 @@ def _execute(job):
         if not p.is_file():
             raise ValueError("不是文件：%s" % p)
         text = p.read_text(encoding="utf-8", errors="replace")[:20000]
-        prompt = ("你是知衡里的时中。只读下面这份发布记录，生成给 Boss 的简报。"
+        prompt = ("你是知衡里的月白。只读下面这份发布记录，生成给 Boss 的简报。"
                   "只依据资料，不编造已发布/未发布状态。输出三段：\n"
                   "1. 最近一条记录\n2. 今天该做什么\n3. 有没有卡住/风险\n"
                   "不超过 220 字。\n" + JR.untrusted_text("发布记录", text))

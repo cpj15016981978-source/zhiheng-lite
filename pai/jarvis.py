@@ -36,7 +36,7 @@ def snapshot(profile="work", tasks=None):
     threads = CT.all_threads(profile)[:8]
     proposals = PA.pending()
     task_rows = _tasks(tasks, profile)
-    return {"identity": {"product": "知衡", "ai": "时中"},
+    return {"identity": {"product": "知衡", "ai": "月白"},
             "due": due[:5], "threads": threads[:5],
             "proposals": proposals[:5], "tasks": task_rows[:5]}
 
@@ -48,7 +48,7 @@ def _line(x):
 def prompt_block(profile="work", tasks=None):
     s = snapshot(profile, tasks)
     lines = ["[贾维斯上下文 · 本地]",
-             "产品：知衡；AI：时中；先结论，再行动；不确定就说不确定。"]
+             "产品：知衡；AI：月白；先结论，再行动；不确定就说不确定。"]
     if s["due"]:
         lines.append("到期承诺：")
         lines.extend("- " + _line(x) for x in s["due"])
@@ -70,7 +70,7 @@ def prompt_block(profile="work", tasks=None):
 
 def brief(profile="work", tasks=None):
     s = snapshot(profile, tasks)
-    lines = ["贾维斯简报", "产品：知衡 / AI：时中", ""]
+    lines = ["贾维斯简报", "产品：知衡 / AI：月白", ""]
     lines.append("【到期】")
     lines.extend(("- " + _line(x)) for x in s["due"]) if s["due"] else lines.append("- 无")
     lines.append("【未完成】")
