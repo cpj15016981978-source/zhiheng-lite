@@ -1,0 +1,33 @@
+# -*- coding: utf-8 -*-
+"""内置技能包：适配 v2.2 的 SKILL.md 格式，保持只读。"""
+import os
+import unittest
+
+from pai import skill_library as SL
+
+
+class BuiltinSkillTest(unittest.TestCase):
+    def setUp(self):
+        self.old = os.environ.get("PAI_SKILLS")
+        os.environ["PAI_SKILLS"] = "on"
+
+    def tearDown(self):
+        if self.old is None:
+            os.environ.pop("PAI_SKILLS", None)
+        else:
+            os.environ["PAI_SKILLS"] = self.old
+
+    def test_six_builtin_skills_load(self):
+        names = {s["name"] for s in SL.SkillLibrary().list()}
+        self.assertTrue({"planning", "file-approval", "self-check", "chat",
+                         "scheduled-tasks", "document-handling"} <= names)
+
+    def test_find_and_readonly(self):
+        lib = SL.SkillLibrary()
+        self.assertIn("planning", [s["name"] for s in lib.find("帮我写一份周报")])
+        with self.assertRaises(SL.SkillError):
+            lib.approve("planning")
+
+
+if __name__ == "__main__":
+    unittest.main()

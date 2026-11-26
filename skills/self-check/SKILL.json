@@ -1,0 +1,25 @@
+{
+  "name": "self-check",
+  "version": "1.0.0",
+  "description": "任务完成后检查错漏、未完成和前后矛盾。",
+  "when": "任务完成后检查错漏、未完成和前后矛盾。",
+  "inputs": [
+    "text"
+  ],
+  "outputs": [
+    "text"
+  ],
+  "tools": [
+    "chat",
+    "file_proposal"
+  ],
+  "permissions": [
+    "local"
+  ],
+  "tests": [
+    "manual smoke"
+  ],
+  "entry": "打开 /plans，点“自我检查”；结论写入 plans.reflection，只作为报告，不自动改结果。",
+  "status": "approved",
+  "approved_by": "builtin"
+}

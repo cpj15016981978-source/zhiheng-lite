@@ -29,6 +29,7 @@ CAPABILITY = {
 }
 
 ROOT = pathlib.Path(os.environ.get("PAI_SKILLS_DIR") or (paths.DATA_DIR / "skills"))
+BUILTIN_ROOT = paths.APP_ROOT / "skills"
 REQUIRED = ("name", "version", "description", "when", "inputs", "outputs",
             "tools", "permissions", "tests", "entry")
 
@@ -58,15 +59,35 @@ class SkillLibrary:
         self.root = pathlib.Path(root or ROOT)
 
     def _dirs(self):
-        if not self.root.exists():
-            return []
-        return sorted([p for p in self.root.iterdir() if p.is_dir() and not p.name.startswith("_")])
+        out = []
+        for base in (self.root, BUILTIN_ROOT):
+            if not base.exists() or base in [x[0] for x in out]:
+                continue
+            out.extend((p, base == BUILTIN_ROOT) for p in sorted(base.iterdir())
+                       if p.is_dir() and not p.name.startswith("_"))
+        return [(p, builtin) for p, builtin in out if (p / "SKILL.json").exists() or (p / "SKILL.md").exists()]
 
-    def _read(self, d):
+    def _read(self, d, builtin=False):
         meta_path = d / "SKILL.json"
         md_path = d / "SKILL.md"
         if not meta_path.exists():
-            raise SkillError("%s 缺 SKILL.json" % d.name)
+            # 兼容只有 SKILL.md 的 v2.2 包：从 frontmatter 生成最小元数据。
+            if not md_path.exists():
+                raise SkillError("%s 缺 SKILL.md" % d.name)
+            body = md_path.read_text(encoding="utf-8")
+            head = body.split("---", 2)[1] if body.startswith("---") and body.count("---") >= 2 else ""
+            meta = {}
+            for line in head.splitlines():
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    meta[k.strip()] = v.strip()
+            meta.setdefault("name", d.name)
+            meta.setdefault("version", "0.0.0")
+            meta.setdefault("description", meta.get("description", ""))
+            for key, val in (("when", meta.get("description", "")), ("inputs", ["text"]),
+                             ("outputs", ["text"]), ("tools", []), ("permissions", ["local"]),
+                             ("tests", []), ("entry", "")):
+                meta.setdefault(key, val)
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
         except Exception as e:
@@ -78,6 +99,7 @@ class SkillLibrary:
         meta["approved_by"] = str(meta.get("approved_by") or "")
         meta["approved_at"] = str(meta.get("approved_at") or "")
         meta["_dir"] = str(d)
+        meta["_builtin"] = bool(builtin)
         meta["_body"] = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
         return meta
 
@@ -85,9 +107,9 @@ class SkillLibrary:
         if not enabled():
             return []
         out = []
-        for d in self._dirs():
+        for d, builtin in self._dirs():
             try:
-                s = self._read(d)
+                s = self._read(d, builtin)
             except SkillError:
                 continue
             if not include_drafts and s["status"] != "approved":
@@ -120,6 +142,8 @@ class SkillLibrary:
         raise SkillError("没有技能：%s" % name)
 
     def _write_meta(self, name, meta):
+        if meta.get("_builtin"):
+            raise SkillError("内置技能只读；请复制到用户技能目录后再改")
         d = pathlib.Path(meta["_dir"])
         meta = {k: v for k, v in meta.items() if not k.startswith("_")}
         AT.write_text(d / "SKILL.json",
