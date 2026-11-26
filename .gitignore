@@ -29,3 +29,7 @@ nul
 # .gitkeep 留着，克隆出来目录才在。
 reports/*
 !reports/.gitkeep
+wiki/
+muse_config.json
+providers.json
+workspace/

@@ -24,8 +24,8 @@
 三条安全底线（不可放宽）：
     1. 只绑 127.0.0.1；请求的 Host 必须是本机，否则 403（挡 CSRF/DNS rebinding）。
     2. 页面渲染一律用 textContent，不拼 innerHTML —— 记忆里的内容不许被当 HTML 执行。
-    3. 密钥仍只走环境变量/内存态；本服务不接收、不落盘、不回显任何密钥。
-       误贴进来的密钥由编排层的 _looks_secret 护栏拦截（与 CLI 同一条线）。
+    3. 密钥通过 /api/providers 接收后写入 DPAPI 加密的 providers.json；
+       接口只返回是否配置，不回显明文。误贴进来的密钥仍由 _looks_secret 护栏拦截。
 """
 import argparse
 import base64
@@ -1324,7 +1324,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/approvals/approve":
                 if not self._ui_gate():
                     return
-                self._send(200, {"ok": True, "token": TOK.approve_id(payload.get("id"))})
+                # 不再把 token 回给页面；执行请走 /api/approvals/execute。
+                ok = bool(TOK.approve_id(payload.get("id")))
+                self._send(200, {"ok": ok})
                 return
             if self.path == "/api/approvals/deny":
                 if not self._ui_gate():

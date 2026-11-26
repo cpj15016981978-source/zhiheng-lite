@@ -3,7 +3,7 @@ name: quality-gate
 on:
   pull_request:
   push:
-    branches: [master, dev-1.1.0]
+    branches: [main, master, dev-1.1.0]
 
 jobs:
   gates:
