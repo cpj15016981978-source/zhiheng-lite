@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title LowSpec Muse v1
+title LowSpec Muse v2.2
 cd /d %~dp0
 python --version >nul 2>&1
 if errorlevel 1 (
@@ -8,8 +8,10 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-echo Installing dependencies (ollama, schedule)...
-python -m pip install --quiet ollama schedule
+echo Installing dependencies (ollama, schedule, markitdown, sqlite-vec)...
+echo (markitdown / sqlite-vec are optional: if they fail to install, the app still runs;
+echo  only docx/xlsx/pdf import and vector-accelerated semantic search will fall back.)
+python -m pip install --quiet ollama schedule "markitdown[docx,xlsx,pdf]" sqlite-vec
 echo Starting Ollama in background (if not already running)...
 start /min cmd /c "ollama serve"
 timeout /t 3 /nobreak >nul

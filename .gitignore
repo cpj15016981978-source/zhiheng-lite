@@ -1,13 +1,24 @@
-﻿models/*.gguf
-models/*.bin
-runtime/*.exe
-runtime/*.dll
-runtime/*.zip
+# 低配版 Muse v2.2 — 随分支走的 .gitignore
+
+# v2.1 评审的教训：这 4 类上次漏了，Key 差点公开
+muse_config.json
+*.db
+*.sqlite
+*.sqlite3
+workspace/
+scripts/
+inbox/
+
+# 运行期杂物
 __pycache__/
-*.pyc
-.venv/
-.env
-data/
-models/
-runtime/
+*.py[cod]
 *.log
+*.tmp
+*.bak*
+.env
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -85,6 +85,12 @@ h3.sec:first-child { margin-top: 0; }
 </div>
 <div class="hint">规划、自我检查这类活比较吃模型，本地小模型效果有限，API 模式（免费 70B）更合适。任务存在本地数据库，重启也不丢。</div>
 <div id="plan-current"></div>
+<h3 class="sec">导入文档（转成 Markdown，先审批再进工作区）</h3>
+<div class="hint">把 PDF/Word/Excel/txt/csv/html 放进 App 目录下的 inbox/ 文件夹，点"导入"转成 Markdown；转完先到"待审批"，你批准了才写进 workspace/。</div>
+<div class="row">
+<button class="btn secondary" id="inbox-refresh">刷新收件箱</button>
+</div>
+<div id="inbox-list"></div>
 <h3 class="sec">待审批的文件</h3>
 <div class="hint">模型想写文件时，先放在这里。你点了“批准”才真正写进 workspace/ 文件夹；不批准就不写。只允许 txt/md/csv/json/html/py，单个文件不超过 1MB。</div>
 <div id="pending-list"></div>
@@ -100,9 +106,15 @@ h3.sec:first-child { margin-top: 0; }
 <section id="tab-memory">
 <div class="row">
 <input id="search-input" type="text" placeholder="搜记忆关键词，例如：日报">
+<select id="search-mode" style="flex:0 0 96px;">
+<option value="keyword">关键词</option>
+<option value="semantic">语义</option>
+<option value="hybrid">混合</option>
+</select>
 <button class="btn" id="search-btn">搜索</button>
 <button class="btn secondary" id="memory-refresh">全部</button>
 </div>
+<div class="hint" id="semantic-hint"></div>
 <div id="memory-list"></div>
 </section>
 <section id="tab-tasks">
@@ -153,6 +165,14 @@ h3.sec:first-child { margin-top: 0; }
 <input id="cfg-local-code" type="text" placeholder="qwen2.5-coder:3b" autocomplete="off"></div>
 <div class="hint">本地模型要先在 Ollama 里 pull 过，例如 ollama pull qwen3:4b。</div>
 </div>
+<div class="card">
+<div style="font-weight:600;margin-bottom:10px;">技能包（skills/）</div>
+<div class="hint">任务匹配到技能时自动引用它的步骤。点一个技能看它的 SKILL.md（触发条件 + 操作手册 + 验收标准）。</div>
+<div id="skill-list"></div>
+<div id="skill-view" style="display:none;">
+<pre class="code" id="skill-content"></pre>
+</div>
+</div>
 <button class="btn" id="cfg-save" style="width:100%;">保存设置</button>
 <div class="hint" id="cfg-msg"></div>
 </section>
@@ -160,6 +180,7 @@ h3.sec:first-child { margin-top: 0; }
 <script>
 var $ = function(s){ return document.querySelector(s); };
 var KIND_TAG = { user: ['你', ''], ai: ['AI', 'ai'], task: ['定时任务', 'task'] };
+var SKILL_LABEL = { planning: '规划循环', 'file-approval': '文件审批', 'self-check': '自我检查', chat: '对话', 'scheduled-tasks': '定时任务', 'document-handling': '文档处理' };
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 document.querySelectorAll('nav button').forEach(function(b){
 b.addEventListener('click', function(){
@@ -173,7 +194,7 @@ if (b.dataset.tab === 'plan') loadPlanTab();
 if (b.dataset.tab === 'memory') loadMemories();
 if (b.dataset.tab === 'tasks') loadTasks();
 if (b.dataset.tab === 'scripts') loadScripts();
-if (b.dataset.tab === 'settings') loadConfig();
+if (b.dataset.tab === 'settings') { loadConfig(); loadSkills(); }
 });
 });
 var log = $('#chat-log'), input = $('#chat-input'), sendBtn = $('#send-btn');
@@ -198,6 +219,7 @@ var j = await r.json();
 thinking.remove();
 if (j.ok) {
 var meta = '模型：' + j.model + ' · 来源：' + (j.source || '');
+if (j.skill && j.skill !== 'chat') meta += ' · 技能：' + (SKILL_LABEL[j.skill] || j.skill);
 if (j.saved_scripts && j.saved_scripts.length) meta += ' · 代码已存：' + j.saved_scripts.join('、');
 addMsg(j.reply, 'ai', meta);
 } else {
@@ -219,14 +241,24 @@ input.addEventListener('keydown', function(e){
   if (e.key === 'Enter') send();
 });
 async function loadMemories(q){
-var url = q ? '/api/search?q=' + encodeURIComponent(q) : '/api/memories';
+var mode = ($('#search-mode') && $('#search-mode').value) || 'keyword';
+var url = q ? '/api/search?q=' + encodeURIComponent(q) + '&mode=' + mode : '/api/memories';
 var r = await fetch(url); var j = await r.json();
+var hint = $('#semantic-hint');
+if (hint) {
+if (!q) { hint.textContent = ''; }
+else if (j.mode === 'semantic') { hint.textContent = '按意思找的结果（语义搜索）。'; }
+else if (j.mode === 'keyword_fallback') { hint.textContent = '语义搜索不可用（没装 BGE-M3 嵌入模型），已退回关键词搜索。'; }
+else if (j.mode === 'hybrid') { hint.textContent = '混合搜索：语义 + 关键词。'; }
+else { hint.textContent = ''; }
+}
 var list = $('#memory-list');
 if (!j.ok || !j.memories.length) { list.innerHTML = '<div class="empty">暂无记忆</div>'; return; }
 list.innerHTML = j.memories.map(function(m){
 var t = KIND_TAG[m.kind] || [m.kind, ''];
+var score = (typeof m.score === 'number') ? ' <span class="time">相似度 ' + m.score.toFixed(2) + '</span>' : '';
 return '<div class="card"><span class="tag ' + t[1] + '">' + esc(t[0]) + '</span>'
-+ '<span class="time">' + esc(m.created_at) + '</span><div>' + esc(m.content) + '</div></div>';
++ '<span class="time">' + esc(m.created_at) + '</span>' + score + '<div>' + esc(m.content) + '</div></div>';
 }).join('');
 }
 $('#search-btn').addEventListener('click', function(){ loadMemories($('#search-input').value.trim()); });
@@ -281,6 +313,27 @@ curMode = b.dataset.mode;
 document.querySelectorAll('#mode-seg button').forEach(function(x){ x.classList.toggle('active', x === b); });
 });
 });
+async function loadSkills(){
+var r = await fetch('/api/skills'); var j = await r.json();
+var list = $('#skill-list');
+$('#skill-view').style.display = 'none';
+if (!j.ok || !j.skills.length) { list.innerHTML = '<div class="empty">没有技能包</div>'; return; }
+list.innerHTML = j.skills.map(function(s){
+return '<div class="card"><a href="#" data-name="' + esc(s.name) + '" style="color:#1a1a2e;">' + esc(SKILL_LABEL[s.name] || s.name) + '</a>'
++ '<span class="time"> · ' + esc(s.name) + '</span><div>' + esc(s.description) + '</div></div>';
+}).join('');
+list.querySelectorAll('a').forEach(function(a){
+a.addEventListener('click', async function(e){
+e.preventDefault();
+var r2 = await fetch('/api/skill?name=' + encodeURIComponent(a.dataset.name));
+var j2 = await r2.json();
+if (j2.ok) {
+$('#skill-content').textContent = j2.skill.content;
+$('#skill-view').style.display = 'block';
+}
+});
+});
+}
 async function loadConfig(){
 var r = await fetch('/api/config'); var j = await r.json();
 if (!j.ok) return;
@@ -384,6 +437,7 @@ openPlan(parseInt(a.dataset.id, 10));
 }
 loadPending();
 loadFiles();
+loadInbox();
 }
 async function openPlan(pid){
 var r = await fetch('/api/plan?id=' + pid); var j = await r.json();
@@ -416,8 +470,9 @@ var r = await fetch('/api/pending'); var j = await r.json();
 var list = $('#pending-list');
 if (!j.ok || !j.pending.length) { list.innerHTML = '<div class="empty">没有待审批的文件</div>'; return; }
 list.innerHTML = j.pending.map(function(p){
+var src = (p.plan_id === 0 && p.step_idx === -1) ? '文档导入' : ('任务#' + p.plan_id + ' 第 ' + (p.step_idx + 1) + ' 步');
 return '<div class="card"><b>' + esc(p.filename) + '</b>'
-+ '<span class="time"> · 任务#' + p.plan_id + ' 第 ' + (p.step_idx + 1) + ' 步 · ' + esc(p.created_at) + '</span>'
++ '<span class="time"> · ' + src + ' · ' + esc(p.created_at) + '</span>'
 + '<pre class="result">' + esc(p.content.slice(0, 500)) + (p.content.length > 500 ? '\n……（共 ' + p.content.length + ' 字）' : '') + '</pre>'
 + '<div class="row" style="margin-top:8px;margin-bottom:0;">'
 + '<button class="btn" data-act="approve" data-id="' + p.id + '">批准写入</button>'
@@ -436,6 +491,27 @@ refreshStatus();
 });
 });
 }
+async function loadInbox(){
+var r = await fetch('/api/inbox'); var j = await r.json();
+var list = $('#inbox-list');
+if (!j.ok || !j.files.length) { list.innerHTML = '<div class="empty">收件箱是空的。把文档放进 App 目录下的 inbox/ 文件夹，再点"刷新收件箱"。</div>'; return; }
+list.innerHTML = j.files.map(function(f){
+return '<div class="card"><b>' + esc(f.name) + '</b>'
++ '<span class="time"> · ' + (f.size/1024).toFixed(1) + ' KB</span>'
++ ' <button class="btn" data-ingest="' + esc(f.name) + '">导入（转 Markdown）</button></div>';
+}).join('');
+list.querySelectorAll('button[data-ingest]').forEach(function(b){
+b.addEventListener('click', async function(){
+b.disabled = true;
+var r = await fetch('/api/ingest', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({filename: b.dataset.ingest}) });
+var j = await r.json();
+alert(j.message || j.error || (j.ok ? '已导入' : '导入失败'));
+b.disabled = false;
+if (j.ok) { loadInbox(); loadPending(); }
+});
+});
+}
+$('#inbox-refresh').addEventListener('click', loadInbox);
 async function loadFiles(){
 var r = await fetch('/api/files'); var j = await r.json();
 var list = $('#file-list');
@@ -467,7 +543,7 @@ if (j.ok) $('#status').textContent = '● 运行中 · ' + j.mode + '模式 · '
 } catch (e) { $('#status').textContent = '● 服务未连接'; }
 }
 refreshStatus();
-addMsg('你好，我是低配版 Muse v2，跑在你自己电脑上的个人 AI 助手。v2 新增了任务页：给一个目标，我先拆成步骤一步步做；想写文件时先等你批准；做完还能自我检查一次。', 'ai');
+addMsg('你好，我是低配版 Muse v2.2，跑在你自己电脑上的个人 AI 助手。v2.2 新增：记忆能按意思搜（语义搜索）、任务会自动引用技能包、文档放进 inbox/ 就能转成 Markdown 导入（先审批再进工作区）。', 'ai');
 input.focus();
 </script>
 </body>
