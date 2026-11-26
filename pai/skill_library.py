@@ -117,9 +117,28 @@ class SkillLibrary:
             out.append(s)
         return out
 
+    def builtin_find(self, query, limit=1):
+        """内置技能只读匹配，不受 PAI_SKILLS 开关影响。"""
+        q = _tokens(query)
+        scored = []
+        for d, builtin in self._dirs():
+            if not builtin:
+                continue
+            try:
+                s = self._read(d, True)
+            except SkillError:
+                continue
+            text = " ".join(str(s.get(k) or "") for k in ("name", "description", "when", "tags"))
+            toks = _tokens(text)
+            hit = sum(1 for t in q if t in toks)
+            if hit:
+                scored.append((hit, s))
+        scored.sort(key=lambda x: -x[0])
+        return [s for _n, s in scored[:limit]]
+
     def find(self, query, limit=5):
         if not enabled():
-            return []
+            return self.builtin_find(query, limit)
         q = _tokens(query)
         scored = []
         for s in self.list():

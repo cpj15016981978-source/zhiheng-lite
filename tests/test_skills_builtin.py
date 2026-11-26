@@ -28,6 +28,11 @@ class BuiltinSkillTest(unittest.TestCase):
         with self.assertRaises(SL.SkillError):
             lib.approve("planning")
 
+    def test_webapp_injects_matched_skill(self):
+        import webapp
+        self.assertIn("planning", webapp._skill_rule("帮我写一份周报"))
+        self.assertEqual(webapp._skill_rule("今天天气"), "")
+
 
 if __name__ == "__main__":
     unittest.main()

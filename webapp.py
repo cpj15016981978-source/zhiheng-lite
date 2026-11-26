@@ -264,6 +264,20 @@ def _emotion_rule(text):
         return ""
 
 
+def _skill_rule(text):
+    try:
+        hits = SL.SkillLibrary(PF.skills_dir()).find(text, 1)
+        if not hits:
+            return ""
+        sk = hits[0]
+        body = str(sk.get("_body") or "").strip()
+        # 只注入命中的一个技能，截断，避免把技能库整本塞进提示词。
+        body = body[:1800]
+        return "[本轮技能：%s]\n%s" % (sk.get("name") or "skill", body)
+    except Exception:
+        return ""
+
+
 def _jarvis_rule():
     try:
         return JV.prompt_block(PF.current(), tasks)
@@ -1118,7 +1132,7 @@ class Handler(BaseHTTPRequestHandler):
                     CR.prompt_block() if CR.enabled() else "",
                     _jarvis_rule(), _emotion_rule(text),
                     _memory_rule(text), _persona_rule(),
-                    _relationship_rule()] if x)
+                    _relationship_rule(), _skill_rule(text)] if x)
                 out = orch.handle(text, channel="web", on_delta=emit,
                                   extra_rule=extra or None,
                                   model=model or None, on_reasoning=emit_reasoning)
@@ -1936,7 +1950,7 @@ class Handler(BaseHTTPRequestHandler):
                     CR.prompt_block() if CR.enabled() else "",
                     _jarvis_rule(), _emotion_rule(text),
                     _memory_rule(text), _persona_rule(),
-                    _relationship_rule()] if x)
+                    _relationship_rule(), _skill_rule(text)] if x)
                 out = orch.handle(text, channel="web", extra_rule=extra or None,
                                   ephemeral=ephemeral, model=model)
                 saved = UNI.save_code_blocks(out.get("response") or "")
