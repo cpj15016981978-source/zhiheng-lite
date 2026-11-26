@@ -12,6 +12,7 @@
 - 不是“零第三方依赖”。实际运行时依赖见 requirements.txt：
   pypdf、python-docx、openpyxl、zhconv、vosk、apscheduler、qwen-agent、soundfile 等。
 - 本地模型、DeepSeek/OpenAI 兼容 API、Qwen-Agent 都是可选路径；具体以设置页为准。
+- agentd 默认不启动：审批走 ledger；需要 token 档时再单独启动 agentd。
 - 许可证：Apache License 2.0，见 LICENSE、NOTICE、THIRD_PARTY.md。
 - 安全边界与报告方式：见 SECURITY.md。
 - 首次启动自动创建 %LOCALAPPDATA%\Zhiheng\data；程序目录不写用户数据。
@@ -31,6 +32,9 @@ Phase5.6 再证【它会看脸色（但只当估计）+ 两轮之间是同一个
 
 更新迭代（每轮做了什么，倒序；完整决策与理由在黑板 00_协作规程与接口契约.txt）
 ------------------------------------------------------------------------------
+    v1.2.0-dev 2026-11-26  产品化阶段 1：审批 nonce/空 id/token 不落盘、低配资源闸、
+                           分级启动、规划→执行→文件审批→自我检查、Apache-2.0、
+                           ASCII 启动器、静态页面路由表、全量 1432 测 OK。
     v0.46  2026-10-22  ★它长了一只耳朵（X6 落地 1a：命令级语音输入，454 → 478 测，ADR-048）。
                        你点的是「命令级零依赖」，所以只做了这一条：不装任何东西、不联网，
                        用的还是 Windows 自带那套 System.Speech —— 和"说"同一个后端，方向反过来。

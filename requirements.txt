@@ -36,7 +36,7 @@ zhconv==1.4.3          # pai/poetry_kb.py:13  简繁转换；人格/诗词链路
 #   板上 P 号那一格写过：上 Vosk 要破 ADR-036 第七条「零第三方依赖」，须另立 ADR + Boss 点头；
 #   当时的现量记录是「1b（上 Vosk）与 ③（不做）都没选」。⇒ 这一行只是把机器现状登记齐，
 #   不等于裁定。两件待办另开：①ADR-036 第七条要么改要么让 asr 退回零依赖；
-#   ②pai/asr.py:12 的 DEFAULT_VOSK 指在 D:\DSH\x6_vosk（别人家的目录），
+#   ②pai/asr.py 的 DEFAULT_VOSK 默认已改为数据目录，可用 PAI_VOSK_MODEL 覆盖，
 #     与 P162 款 4 修掉的那两处同一族，挪不挪等 Boss 一句。
 vosk==0.3.45           # pai/asr.py:30/49  本地中文语音识别（模型目录另由 PAI_VOSK_MODEL 指）
 apscheduler>=3.10,<4

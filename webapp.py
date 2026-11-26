@@ -181,6 +181,13 @@ def _startup_step(name, fn, critical=False):
         return False
 AGENTD_TOKEN = os.environ.get("PAI_AGENTD_TOKEN_QODER", "")
 M1_DIR = Path(__file__).resolve().parent / "web"
+PAGES = {
+    "/chat": "chat.html", "/approvals": "approvals.html",
+    "/templates": "templates.html", "/graph": "graph.html",
+    "/mcp": "mcp.html", "/plans": "plans.html", "/files": "files.html",
+    "/security": "security.html", "/usage": "usage.html",
+    "/audit": "audit.html", "/memory": "memory.html",
+}
 MAX_BODY = 64 * 1024          # 本机单人用；超限直接拒，免得一个烂请求吃掉内存
 
 mem = None                    # 单进程共享；模型生成由 _GEN_LOCK 串行
@@ -543,60 +550,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(500, {"error": "dashboard.html 缺失"})
             else:
                 self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path.split("?", 1)[0] in ("/chat", "/chat/"):
+        elif self.path.split("?", 1)[0] in PAGES:
+            name = PAGES[self.path.split("?", 1)[0]]
             try:
-                body = (M1_DIR / "chat.html").read_bytes()
+                body = (M1_DIR / name).read_bytes()
             except OSError:
-                self._send(500, {"error": "chat.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/approvals":
-            try:
-                body = (M1_DIR / "approvals.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "approvals.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/templates":
-            try:
-                body = (M1_DIR / "templates.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "templates.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/graph":
-            try:
-                body = (M1_DIR / "graph.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "graph.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/mcp":
-            try:
-                body = (M1_DIR / "mcp.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "mcp.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/plans":
-            try:
-                body = (M1_DIR / "plans.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "plans.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/files":
-            try:
-                body = (M1_DIR / "files.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "files.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/security":
-            try:
-                body = (M1_DIR / "security.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "security.html 缺失"})
+                self._send(500, {"error": name + " 缺失"})
             else:
                 self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path == "/api/plans":
@@ -615,27 +574,6 @@ class Handler(BaseHTTPRequestHandler):
                                  "network": NP.status()})
             except Exception as e:
                 self._send(500, {"error": "%s: %s" % (type(e).__name__, e)})
-        elif self.path == "/usage":
-            try:
-                body = (M1_DIR / "usage.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "usage.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/audit":
-            try:
-                body = (M1_DIR / "audit.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "audit.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
-        elif self.path == "/memory":
-            try:
-                body = (M1_DIR / "memory.html").read_bytes()
-            except OSError:
-                self._send(500, {"error": "memory.html 缺失"})
-            else:
-                self._send(200, self._html(body), "text/html; charset=utf-8")
         elif self.path.startswith("/m1/"):
             name = self.path[len("/m1/"):]
             if not name or "/" in name or chr(92) in name or name.startswith("."):
