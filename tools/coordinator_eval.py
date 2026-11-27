@@ -35,28 +35,63 @@ SCHEMA = {
 }
 
 ALLOWED = set(SCHEMA["properties"]["steps"]["items"]["properties"]["action"]["enum"])
+FIXTURE_ROOT = pathlib.Path(r"D:\DSH\coordinator_eval_workspace")
+FILES = {
+    "a.txt": "alpha\n",
+    "b.txt": "beta\n",
+    "report.md": "# 报告\n本周完成审批链修复。风险：语义搜索未调参。\n",
+    "notes.md": "# 笔记\n- 修复 M-9\n- 补 files token\n",
+    "meeting.md": "# 会议\n决定先做离线验收，再做版本 tag。\n",
+    "records.txt": "周一 10 次\n周二 12 次\n",
+    "invoice.md": "金额：1200 元\n日期：2026-11-27\n",
+    "data.csv": "name,value\na,1\nb,2\n",
+    "app.py": "def add(a, b):\n    return a - b\n",
+    "draft_report.md": "# 周报草稿\n这周修了审批与协调者。\n",
+    "docs/plan.md": "# 计划\n1. 安全收口\n2. 离线验收\n",
+    "inbox/mail.md": "# 邮件\n客户询问交期。\n",
+    "inbox/todo.md": "# 待办\n回邮件。\n",
+}
+
+
+def ensure_fixtures(root=FIXTURE_ROOT):
+    root = pathlib.Path(root)
+    for rel, text in FILES.items():
+        p = root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if not p.exists():
+            p.write_text(text, encoding="utf-8")
+    manifest = sorted(str(p.relative_to(root)).replace("\\", "/") for p in root.rglob("*") if p.is_file())
+    return root, manifest
+
+
+MANIFEST = []
+
+
+def set_manifest(manifest):
+    global MANIFEST
+    MANIFEST = list(manifest)
 
 TASKS = [
-    {"id": "t01", "goal": "读取 workspace 里的 a.txt 并告诉我内容", "expect": ["read_text"], "min_steps": 1},
+    {"id": "t01", "goal": "读取 a.txt 并告诉我内容", "expect": ["read_text"], "min_steps": 1},
     {"id": "t02", "goal": "列出 workspace 目录下有哪些文件", "expect": ["list_dir"], "min_steps": 1},
     {"id": "t03", "goal": "总结 report.md 的要点", "expect": ["summarize_file"], "min_steps": 1},
     {"id": "t04", "goal": "比较 a.txt 和 b.txt 的差异", "expect": ["read_text"], "min_steps": 2},
-    {"id": "t05", "goal": "读取本周记录，生成一份周报文件", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t06", "goal": "读取发票汇总.md，提取金额和日期", "expect": ["read_text"], "min_steps": 1},
-    {"id": "t07", "goal": "把会议记录.md 整理成待办清单", "expect": ["read_text", "agent_step"], "min_steps": 2},
+    {"id": "t05", "goal": "读取 records.txt，生成一份周报文件", "expect": ["read_text", "agent_step"], "min_steps": 2},
+    {"id": "t06", "goal": "读取 invoice.md，提取金额和日期", "expect": ["read_text"], "min_steps": 1},
+    {"id": "t07", "goal": "把 meeting.md 整理成待办清单", "expect": ["read_text", "agent_step"], "min_steps": 2},
     {"id": "t08", "goal": "检查 app.py 的明显错误并给修改建议", "expect": ["read_text", "agent_step"], "min_steps": 2},
     {"id": "t09", "goal": "为三天两夜的东莞行程做计划", "expect": ["agent_step"], "min_steps": 1},
-    {"id": "t10", "goal": "整理收件箱：先列出文件，再读每个 md 的摘要", "expect": ["list_dir", "summarize_file"], "min_steps": 2},
+    {"id": "t10", "goal": "整理 inbox：先列出文件，再读每个 md 的摘要", "expect": ["list_dir", "summarize_file"], "min_steps": 2},
     {"id": "t11", "goal": "你好，介绍一下你能做什么", "expect": ["agent_step"], "min_steps": 1},
     {"id": "t12", "goal": "不要执行 shell；只读 a.txt 并报告", "expect": ["read_text"], "min_steps": 1},
     {"id": "t13", "goal": "根据 notes.md 写一份总结到 summary.md", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t14", "goal": "先列出目录，再读取其中最新的 md 文件", "expect": ["list_dir", "read_text"], "min_steps": 2},
+    {"id": "t14", "goal": "先列出 docs 目录，再读取 docs/plan.md", "expect": ["list_dir", "read_text"], "min_steps": 2},
     {"id": "t15", "goal": "读取 data.csv，汇总后生成报告", "expect": ["read_text", "agent_step"], "min_steps": 2},
     {"id": "t16", "goal": "把 inbox 里的每个 md 文件做一句话摘要", "expect": ["list_dir", "summarize_file"], "min_steps": 2},
     {"id": "t17", "goal": "总结 docs/plan.md，并列出三个风险", "expect": ["summarize_file"], "min_steps": 1},
-    {"id": "t18", "goal": "读周报草稿，改写成正式周报文件", "expect": ["read_text", "agent_step"], "min_steps": 2},
+    {"id": "t18", "goal": "读 draft_report.md，改写成正式周报文件", "expect": ["read_text", "agent_step"], "min_steps": 2},
     {"id": "t19", "goal": "帮我看看该先做哪件事（信息不足时先问）", "expect": ["agent_step"], "min_steps": 1},
-    {"id": "t20", "goal": "做一份完整月报：列目录、读三份记录、汇总、生成文件", "expect": ["list_dir", "read_text", "agent_step"], "min_steps": 3},
+    {"id": "t20", "goal": "做一份完整月报：列目录、读 records.txt 与 notes.md、生成文件", "expect": ["list_dir", "read_text", "agent_step"], "min_steps": 3},
 ]
 
 PROMPT = """你是知衡的顺序协调者。只输出一个 JSON 对象，不要 Markdown，不要解释。
@@ -64,17 +99,22 @@ JSON 必须符合：
 {"goal":"目标","steps":[{"id":"s1","action":"read_text|list_dir|summarize_file|agent_step","description":"这一步做什么","path":"可选路径","depends_on":["s0"]}]}
 规则：
 - 1-8 步；id 唯一；depends_on 只能引用前面的 id。
-- read_text/list_dir/summarize_file 只读；写文件/需要判断时用 agent_step。
+- 读文件内容用 read_text。
+- 要摘要/提炼要点用 summarize_file。
+- 要看目录用 list_dir。
+- 生成、改写、判断、写文件、闲聊、信息不足时用 agent_step。
+- 只可使用下面清单里的路径；不要发明路径。
 - 不要发明 shell、网络或其他动作。
-- 路径只能是 workspace 内相对路径。
+可用路径：
+%s
 目标：%s
 """
 
 
-def ask(model, goal, url="http://127.0.0.1:11434"):
+def ask(model, goal, url="http://127.0.0.1:11434", manifest=None):
     body = {
         "model": model,
-        "messages": [{"role": "user", "content": PROMPT % goal}],
+        "messages": [{"role": "user", "content": PROMPT % ("\n".join("- " + x for x in (manifest or MANIFEST)), goal)}],
         "stream": False,
         "format": SCHEMA,
         "options": {"temperature": 0, "num_ctx": 4096, "num_predict": 600},
@@ -129,14 +169,17 @@ def main():
     ap.add_argument("--url", default="http://127.0.0.1:11434")
     ap.add_argument("--out", default="")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--fixtures", default=str(FIXTURE_ROOT))
     ns = ap.parse_args()
+    _root, manifest = ensure_fixtures(ns.fixtures)
+    set_manifest(manifest)
     tasks = TASKS[:ns.limit] if ns.limit else TASKS
     rows = []
     for t in tasks:
         t0 = time.time()
         err = ""
         try:
-            raw = ask(ns.model, t["goal"], ns.url)
+            raw = ask(ns.model, t["goal"], ns.url, manifest)
             obj, err = parse(raw)
         except Exception as e:
             raw, obj, err = "", None, "%s: %s" % (type(e).__name__, e)
