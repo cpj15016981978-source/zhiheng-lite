@@ -122,6 +122,7 @@ class Shell:
         self.nonce = secrets.token_urlsafe(32)
         os.environ["PAI_UI_NONCE"] = self.nonce
         os.environ["PAI_NATIVE_CONFIRM"] = "1"
+        os.environ["PAI_REQUIRE_NATIVE_CONFIRM"] = "1"
         import webapp
         db = pathlib.Path(os.environ.get("LOCALAPPDATA") or pathlib.Path.home()) / "Zhiheng" / "data" / "memory.db"
         self.httpd, self.thread = webapp.start(port=self.port, db_path=str(db), quiet=True)

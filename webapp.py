@@ -186,8 +186,12 @@ UI_NONCE = UI_NONCE_FIXED or secrets.token_urlsafe(32)
 
 
 def _native_confirm(title, detail):
-    """桌面壳内高风险动作的系统级确认；非 Windows/未开启时直接放行。"""
-    if os.name != "nt" or os.environ.get("PAI_NATIVE_CONFIRM", "").strip() not in ("1", "on", "true", "yes"):
+    """桌面壳内高风险动作的系统级确认；要求开启但没开时 fail-closed。"""
+    enabled = os.environ.get("PAI_NATIVE_CONFIRM", "").strip() in ("1", "on", "true", "yes")
+    required = os.environ.get("PAI_REQUIRE_NATIVE_CONFIRM", "").strip() in ("1", "on", "true", "yes")
+    if required and not enabled:
+        return False
+    if os.name != "nt" or not enabled:
         return True
     try:
         import ctypes
