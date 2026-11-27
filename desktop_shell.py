@@ -94,7 +94,7 @@ def _tray_image():
 
 
 class Shell:
-    def __init__(self, port, theme="dark", compact=False, tray=True):
+    def __init__(self, port, theme="dark", compact=False, tray=True, attach=False):
         self.port = int(port)
         self.theme = theme if theme in ("dark", "warm") else "dark"
         self.compact = bool(compact)
@@ -104,11 +104,20 @@ class Shell:
         self.httpd = None
         self.thread = None
         self._stopped = False
+        self.attach = bool(attach)
         self.nonce = ""
 
     def ensure_server(self):
         if _healthy(self.port):
-            return False
+            if self.attach:
+                return False
+            # 默认不复用已经有服务的端口：那条路径没有壳持有的 nonce/原生确认。
+            for p in range(self.port + 1, self.port + 10):
+                if not _healthy(p):
+                    self.port = p
+                    break
+            else:
+                raise RuntimeError("附近没有可用端口，无法启用带外确认")
         # nonce 只在本进程内存；不写进 HTML，也不让 HTTP 页面自己生成。
         self.nonce = secrets.token_urlsafe(32)
         os.environ["PAI_UI_NONCE"] = self.nonce
@@ -209,6 +218,7 @@ def main(argv=None):
     ap.add_argument("--theme", choices=["dark", "warm"], default="dark")
     ap.add_argument("--compact", action="store_true", help="页面缩到 90%%")
     ap.add_argument("--no-tray", action="store_true")
+    ap.add_argument("--attach", action="store_true", help="复用已有 8753（不启用壳 nonce/原生确认）")
     ap.add_argument("--autostart", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--install-autostart", action="store_true")
     ap.add_argument("--remove-autostart", action="store_true")
@@ -220,7 +230,7 @@ def main(argv=None):
         remove_autostart()
         print("已移除开机自启")
         return 0
-    return Shell(ns.port, ns.theme, ns.compact, not ns.no_tray).run()
+    return Shell(ns.port, ns.theme, ns.compact, not ns.no_tray, attach=ns.attach).run()
 
 
 if __name__ == "__main__":
