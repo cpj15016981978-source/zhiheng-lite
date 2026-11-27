@@ -1,10 +1,15 @@
 ﻿# -*- coding: utf-8 -*-
 param(
   [string]$Out = 'D:\DSH\ZhihengPackage',
-  [string]$PythonSrc = 'D:\ZhihengInstall\python'
+  [string]$PythonSrc = $env:PAI_PYTHON
 )
 $ErrorActionPreference = 'Stop'
 $Repo = Split-Path -Parent $PSScriptRoot
+if (-not $PythonSrc) {
+  $cmd = Get-Command python -ErrorAction SilentlyContinue
+  if ($cmd) { $PythonSrc = Split-Path -Parent $cmd.Source }
+}
+if (-not $PythonSrc -or -not (Test-Path $PythonSrc)) { throw '缺少 Python 源目录：请设置 PAI_PYTHON' }
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $App = Join-Path $Out 'app'
 New-Item -ItemType Directory -Force -Path $App | Out-Null

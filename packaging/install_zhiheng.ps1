@@ -17,7 +17,9 @@ if (-not (Test-Path $PySrc)) {
 }
 $Log = Join-Path $Root 'install.log'
 function Log($m) { Add-Content -Path $Log -Value ("{0} {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $m) }
-Log "install/upgrade -> $Target"
+$VersionFile = Join-Path $AppSrc 'version.json'
+$Version = if (Test-Path $VersionFile) { (Get-Content $VersionFile -Raw -Encoding UTF8 | ConvertFrom-Json).version } else { 'unknown' }
+Log "install/upgrade -> $Target (version=$Version)"
 
 $Exists = Test-Path $Target
 if ($Exists) {
