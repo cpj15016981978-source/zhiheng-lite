@@ -81,6 +81,8 @@
   .session .acts { display: flex; gap: 2px; flex: 0 0 auto; }
   .session .acts button { padding: 0 3px; }
   .side-foot { padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+  .side-nav { display:flex; gap:8px; padding:10px 14px; border-top:1px solid var(--line); }
+  .side-nav a { color:var(--accent); font-size:12px; text-decoration:none; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .top {
     position: relative; z-index: 30;
@@ -363,12 +365,13 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <div class="mark">时</div>
+      <div class="mark">月</div>
       <div><b>知衡</b><small>PERSONAL AI</small></div>
     </div>
     <button class="new" id="newChat">＋ 新对话</button>
     <div class="side-search"><input id="sessionSearch" placeholder="搜索对话…" /></div>
     <div class="sessions" id="sessions"></div>
+    <div class="side-nav"><a href="/files">文件审批</a><a href="/coordinator">协调者</a></div>
     <div class="side-foot">知衡记得你，月白回答你。</div>
   </aside>
 
