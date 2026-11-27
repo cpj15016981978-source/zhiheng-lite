@@ -54,6 +54,7 @@ SPEC = (
     ("culture",           False, "[可引用的文化背景（检索所得，非我生成；引用时须标出处）]"),
     ("self_desc",         True,  None),
     ("affect",            False, None),
+    ("reasoning",         False, "[本轮认知模式]"),
     ("user",              False, "[用户]"),
 )
 
@@ -64,7 +65,7 @@ STABLE_FIRST_ORDER = (
     "system", "persona", "principles_header", "principles", "facts", "reminders", "self_desc",
     # 易变段紧随其后；相对顺序也保持原样，避免顺带改变模型行为
     "turn_requirement", "extra_rule_header", "extra_rule", "memory_ctx", "wiki_ctx",
-    "poetry_ctx", "router_ctx", "recalled", "culture", "affect", "user",
+    "poetry_ctx", "router_ctx", "recalled", "culture", "affect", "reasoning", "user",
 )
 
 STABLE_KEYS = frozenset(k for k, s, _ in SPEC if s)

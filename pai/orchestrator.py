@@ -136,6 +136,51 @@ def _complete(prompt, models=None, on_delta=None, on_reasoning=None):
     return outs
 
 
+REASONING_MODES = ("演绎", "归纳", "溯因", "直觉", "类比", "发散", "收敛", "批判", "系统", "元认知", "因果")
+
+
+def reasoning_policy(text):
+    """核心推理政策：按任务选 2-4 个镜头，不要求每轮全开。"""
+    t = str(text or "")
+    modes = []
+    def add(*xs):
+        for x in xs:
+            if x not in modes:
+                modes.append(x)
+    if any(k in t for k in ("为什么", "原因", "故障", "根因", "如果当初", "反事实", "异常", "诊断")):
+        add("因果", "溯因")
+    if any(k in t for k in ("选择", "方案", "比较", "评估", "优缺点", "怎么做",
+                            "头脑风暴", "多给", "想法", "灵感",
+                            "评分", "选最好", "挑一个")):
+        add("发散", "收敛", "批判")
+    if any(k in t for k in ("像", "类似", "参考", "案例", "类比")):
+        add("类比")
+    if any(k in t for k in ("规律", "经验", "总结", "从错误", "归纳")):
+        add("归纳")
+    if any(k in t for k in ("依赖", "影响", "连锁", "流程", "规划", "系统")):
+        add("系统")
+    if any(k in t for k in ("不确定", "猜", "信心", "不知道", "可能", "大概")):
+        add("元认知")
+    if any(k in t for k in ("检查", "风险", "漏洞", "找错", "质疑", "证据")):
+        add("批判")
+    if any(k in t for k in ("逻辑", "证明", "推导", "推理")):
+        add("演绎")
+    if any(k in t for k in ("直觉", "感觉", "第一反应")):
+        add("直觉")
+    if not modes:
+        add("演绎", "元认知")
+    # 一次最多四个镜头；保留先命中的前四个。
+    modes = modes[:4]
+    return {"modes": modes, "confidence": "低" if "元认知" in modes else "中",
+            "guard": "模式是检查清单，不是台词；不确定先标不确定，不把猜测当事实"}
+
+
+def reasoning_block(text):
+    p = reasoning_policy(text)
+    return ("[本轮认知模式]\n- 选用：%s\n- 纪律：%s；先给结论，再给证据/步骤。"
+            % ("、".join(p["modes"]), p["guard"]))
+
+
 def _build_prompt(text, recalled, facts, principles=None, culture=None, affect=None,
                   self_desc=None, extra_rule=None, memory_ctx=None, wiki_ctx=None,
                   router_ctx=None, poetry_ctx=None, reminders=None):
@@ -161,6 +206,7 @@ def _build_prompt(text, recalled, facts, principles=None, culture=None, affect=N
             for t in reminders) if reminders else None),
         "self_desc": self_desc,
         "affect": M5.prompt_block(affect) if affect else None,
+        "reasoning": reasoning_block(text),
         "user": f"[用户] {text}",
     }
     if any(k in str(text) for k in ("能做什么", "会做什么", "能力", "服务", "功能", "这些能做")):
@@ -1292,6 +1338,7 @@ class Orchestrator:
                             "cost": round(review["meter"]["cost"], 6),
                             "tokens": review["meter"]["tokens"]},
             "tool_use": tool_use,
+            "reasoning": reasoning_policy(text),
         }
         if router_trace is not None:
             trace["router"] = router_trace
