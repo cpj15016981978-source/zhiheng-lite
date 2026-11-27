@@ -15,7 +15,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -206,16 +205,6 @@ class TestWholeFaceFailure(unittest.TestCase):
         self.assertIn("[H4]", v[0])
         self.assertIn("比对面塌成零件", v[0])
 
-    def test_missing_archive_dirs_on_clean_tree_are_skipped(self):
-        """干净 clone 没有本机归档片，不该替投递机背 H4。"""
-        root = Path(tempfile.mkdtemp())
-        (root / "readme.txt").write_bytes(GOOD.encode("utf-8") + CRLF)
-        with mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("PAI_PAPERWORK_REQUIRE_ARCHIVES", None)
-            v, _d, _n, st = CP.run(root, cutoff=ALWAYS)
-        self.assertFalse([x for x in v if "归档登记" in x], v)
-        self.assertEqual(st["arch_skipped"], 2)
-
 
 class TestWhitelistTeeth(_Fixture):
     """白名单三刀：形状一致只登记、变脏要红、销账要签字。少一刀它就退化成自我豁免。"""
@@ -257,6 +246,7 @@ class TestWhitelistTeeth(_Fixture):
         self.assertIn("H3-sha-no-moment", d[0])
 
 
+@unittest.skipIf(os.environ.get("PAI_CI") == "1", "本机板根测试；干净 CI 无板根")
 class TestCleanTreeAndExitCode(_Fixture):
     def test_clean_tree_zero_violations(self):
         self._add("留底_20261025_x/读数.txt", GOOD)

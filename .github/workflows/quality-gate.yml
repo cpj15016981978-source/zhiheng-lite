@@ -12,7 +12,7 @@ concurrency:
 jobs:
   gates:
     runs-on: windows-latest
-    timeout-minutes: 12
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,11 +25,13 @@ jobs:
       - name: Run governance gates
         # contract 是纯逻辑门禁；红了必须拦，不再 continue-on-error。
         run: python tools/gates.py --tier contract
-      - name: Run backend regression
-        timeout-minutes: 8
+      - name: Run backend regression (full)
+        timeout-minutes: 20
         shell: pwsh
+        env:
+          PAI_CI: "1"
         run: |
-          python -m unittest tests.test_approval_boundary tests.test_agent_step tests.test_plan_loop tests.test_productization tests.test_webapp_aliases tests.test_low_spec_resources tests.test_console_encoding tests.test_web_client tests.test_inbox tests.test_skills_builtin tests.test_semantic_memory tests.test_web_ime_guard tests.test_tool_entry_surface tests.test_local_api_key tests.test_persona_prompt tests.test_identity_guard tests.test_ui_gate 2>&1 | Tee-Object -FilePath ci-tests.log
+          python -m unittest discover -s tests -p "test_*.py" 2>&1 | Tee-Object -FilePath ci-tests.log
           $code = $LASTEXITCODE
           if ($code -ne 0) {
             Get-Content ci-tests.log | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

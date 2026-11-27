@@ -305,7 +305,7 @@ def _emotion_rule(text):
 
 def _skill_rule(text):
     try:
-        hits = SL.SkillLibrary(PF.skills_dir()).find(text, 1)
+        hits = SL.SkillLibrary(PF.skills_dir(), include_builtin=True).find(text, 1)
         if not hits:
             return ""
         sk = hits[0]
@@ -2547,7 +2547,7 @@ def start(port=DEFAULT_PORT, db_path=None, quiet=False, ready_timeout=10):
             mem = Memory(path)
             orch = Orchestrator(mem)
             tasks = TL.TaskLedger(Path(path).parent / "tasks.db")
-            skills = SL.SkillLibrary(PF.skills_dir())
+            skills = SL.SkillLibrary(PF.skills_dir(), include_builtin=True)
             convs = CONV.ConversationStore(Path(path).parent / "conversations.db")
             STARTUP_REPORT["core"] = {"ok": True}
         except Exception as e:

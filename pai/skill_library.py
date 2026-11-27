@@ -55,13 +55,14 @@ class SkillError(ValueError):
 
 
 class SkillLibrary:
-    def __init__(self, root=None):
+    def __init__(self, root=None, include_builtin=False):
         self.root = pathlib.Path(root or ROOT)
+        self.include_builtin = bool(include_builtin or root is None)
 
     def _dirs(self):
         out = []
         seen_bases = set()
-        for base in (self.root, BUILTIN_ROOT):
+        for base in ((self.root, BUILTIN_ROOT) if self.include_builtin else (self.root,)):
             if not base.exists() or base in seen_bases:
                 continue
             seen_bases.add(base)
