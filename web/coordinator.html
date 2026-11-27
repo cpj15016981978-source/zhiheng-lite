@@ -19,7 +19,7 @@ pre{white-space:pre-wrap;font-size:12px;background:#f7f5f0;padding:8px;border-ra
 <p>顺序协调：目标 → 拆步骤 → 每步批准执行 → 结果与验收。写文件仍走 /files 审批。</p>
 <div class="card">
   <input id="goal" placeholder="目标，例如：整理本周会议纪要并生成周报" />
-  <textarea id="steps" placeholder="可选：每行一个步骤；留空则由模型拆 3-6 步"></textarea>
+  <textarea id="steps" placeholder="每行一步；只读用 read:文件 / list:目录 / summary:文件；写作用普通文字；留空由模型拆 3-6 步"></textarea>
   <button class="primary" id="start">生成协调计划</button>
   <span id="msg" class="muted"></span>
 </div>
@@ -27,6 +27,7 @@ pre{white-space:pre-wrap;font-size:12px;background:#f7f5f0;padding:8px;border-ra
   <b id="planTitle"></b> <span id="planState" class="muted"></span>
   <div id="stepsList"></div>
   <button class="primary" id="next">执行下一步</button>
+  <button id="parallel">并行只读</button>
   <button id="resume">恢复失败步骤</button>
   <div id="trajectory"></div>
   <div id="result"></div>
@@ -57,6 +58,7 @@ $('#start').onclick=async()=>{
   try{const d=await api('/api/coordinator/start',{goal,steps:$('#steps').value});$('#msg').textContent='已生成 '+d.steps.length+' 步';render(await api('/api/coordinator/status?id='+encodeURIComponent(d.id)))}
   catch(e){$('#msg').textContent='失败：'+e.message}
 };
+$('#parallel').onclick=async()=>{if(!current)return;$('#result').textContent='并行只读中…';try{const d=await api('/api/coordinator/parallel',{id:current});$('#result').textContent='并行完成 '+d.parallel+' 步';render(d)}catch(e){$('#result').textContent='失败：'+e.message}};
 $('#resume').onclick=async()=>{if(!current)return;try{const d=await api('/api/coordinator/resume',{id:current});$('#result').textContent='恢复 '+d.resumed+' 步';render(await api('/api/coordinator/status?id='+encodeURIComponent(current)))}catch(e){$('#result').textContent='失败：'+e.message}};
 $('#next').onclick=async()=>{if(!current)return;$('#result').textContent='执行中…';try{const d=await api('/api/coordinator/step',{id:current});$('#result').innerHTML='<pre>'+esc(JSON.stringify(d.result,null,2))+'</pre>';render(d)}catch(e){$('#result').textContent='失败：'+e.message}};
 </script></body></html>

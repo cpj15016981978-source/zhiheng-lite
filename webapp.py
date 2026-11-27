@@ -35,6 +35,7 @@ import hashlib
 import hmac
 import json
 import os
+import concurrent.futures
 import sys
 import tempfile
 import threading
@@ -172,6 +173,27 @@ GATED_PREFIXES = (
     "/api/browser/", "/api/mcp/", "/api/code/", "/api/persona/",
     "/api/agents/", "/api/jobs/", "/api/workspaces/", "/api/memory_candidates/",
 )
+COORD_READ_ONLY = ("read_text", "list_dir", "summarize_file")
+
+
+def _coord_step(step):
+    """把一步变成 (action, payload, title)；只有显式只读前缀才并行。"""
+    if isinstance(step, dict):
+        text = str(step.get("text") or step.get("prompt") or "").strip()
+        action = str(step.get("action") or "agent_step")
+        payload = dict(step.get("payload") or {})
+        if action in ("read_text", "list_dir", "summarize_file") and step.get("path"):
+            payload.setdefault("path", step.get("path"))
+        return action, payload, text or action
+    text = str(step or "").strip()
+    for prefix, action, key in (("read:", "read_text", "path"), ("list:", "list_dir", "path"),
+                                ("summary:", "summarize_file", "path")):
+        if text.lower().startswith(prefix):
+            path = text[len(prefix):].strip()
+            if path and not os.path.isabs(path):
+                path = str(PATHS.WORKSPACE / path)
+            return action, {"path": path}, "%s %s" % (action, path)
+    return "agent_step", {}, text
 UI_NONCE_FIXED = (os.environ.get("PAI_UI_NONCE") or "").strip()
 UI_NONCE = UI_NONCE_FIXED or secrets.token_urlsafe(32)
 
@@ -2178,14 +2200,19 @@ class Handler(BaseHTTPRequestHandler):
                     if not steps:
                         raise ValueError("没有拆出步骤")
                     plan = JR.create_plan(goal, steps)
-                    prev = ""
+                    prev_write = ""
                     ids = []
                     for i, step in enumerate(steps):
-                        job = JR.create("协调：" + step[:80], prompt=step, agent="coordinator",
-                                        action_type="agent_step",
-                                        action_payload={"goal": goal, "step": step},
-                                        depends_on=prev, plan_id=plan["id"], step_index=i)
-                        ids.append(job["id"]); prev = job["id"]
+                        action, spayload, stitle = _coord_step(step)
+                        if action == "agent_step":
+                            spayload = {"goal": goal, "step": stitle}
+                        job = JR.create("协调：" + stitle[:80], prompt=stitle, agent="coordinator",
+                                        action_type=action,
+                                        action_payload=spayload,
+                                        depends_on=prev_write, plan_id=plan["id"], step_index=i)
+                        ids.append(job["id"])
+                        if action not in COORD_READ_ONLY:
+                            prev_write = job["id"]
                     JR.update_plan(plan["id"], "created")
                     EG.audit("coordinator_start", "medium", "allow", plan["id"], ",".join(ids))
                     self._send(200, {"ok": True, "id": plan["id"], "steps": steps, "jobs": ids})
@@ -2202,6 +2229,36 @@ class Handler(BaseHTTPRequestHandler):
                     out = JR.resume_plan(pid)
                     EG.audit("coordinator_resume", "medium", "allow", pid, str(out.get("resumed")))
                     self._send(200, out)
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/coordinator/parallel":
+                if not self._ui_gate():
+                    return
+                try:
+                    pid = str(payload.get("id") or "")
+                    jobs = []
+                    for x in JR.plan_jobs(pid):
+                        if x.get("status") != "pending":
+                            continue
+                        dep = x.get("depends_on") or ""
+                        if dep and (JR.get(dep) or {}).get("status") != "done":
+                            continue
+                        if x.get("action_type") not in COORD_READ_ONLY:
+                            continue
+                        jobs.append(x)
+                    if not jobs:
+                        raise ValueError("没有可并行的只读步骤")
+                    for x in jobs:
+                        JR.approve(x["id"], "Boss")
+                    def one(j):
+                        return {"id": j["id"], "out": JW.run_once(dry_run=False, job_id=j["id"])}
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(jobs))) as ex:
+                        results = list(ex.map(one, jobs))
+                    EG.audit("coordinator_parallel", "medium", "allow", pid, str(len(jobs)))
+                    self._send(200, {"ok": True, "parallel": len(jobs), "results": results,
+                                     "plan": JR.get_plan(pid), "jobs": JR.plan_jobs(pid),
+                                     "trajectory": JR.trajectory(pid)})
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return

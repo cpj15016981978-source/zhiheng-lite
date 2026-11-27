@@ -346,7 +346,7 @@ def stop_background():
     _STOP.set()
 
 
-def run_once(dry_run=True):
+def run_once(dry_run=True, job_id=None):
     if not JR.enabled():
         raise RuntimeError("PAI_JOB_RUNNER 未开启")
     if not enabled():
@@ -355,7 +355,12 @@ def run_once(dry_run=True):
         where = ("status='pending'" if dry_run else
                  "status='pending' AND approved=1 AND attempts < 3 "
                  "AND (depends_on='' OR EXISTS(SELECT 1 FROM jobs p WHERE p.id=jobs.depends_on AND p.status='done'))")
-        row = c.execute("SELECT * FROM jobs WHERE " + where + " ORDER BY created_at LIMIT 1").fetchone()
+        if job_id:
+            pool = "id=? AND " + where
+            row = c.execute("SELECT * FROM jobs WHERE " + pool + " ORDER BY created_at LIMIT 1",
+                            (str(job_id),)).fetchone()
+        else:
+            row = c.execute("SELECT * FROM jobs WHERE " + where + " ORDER BY created_at LIMIT 1").fetchone()
         if not row:
             return {"ok": True, "claimed": 0, "mode": "dry-run" if dry_run else "execute",
                     "message": "没有 pending 作业"}

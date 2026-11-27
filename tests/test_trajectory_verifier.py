@@ -8,6 +8,7 @@ import unittest
 from pai import paths as PATHS
 from pai import job_runner as JR
 from pai import verifier as VF
+import webapp
 
 
 class TrajectoryTest(unittest.TestCase):
@@ -47,6 +48,11 @@ class TrajectoryTest(unittest.TestCase):
         out = JR.resume_plan(plan["id"])
         self.assertEqual(1, out["resumed"])
         self.assertEqual("pending", JR.get(job["id"])["status"])
+
+    def test_only_explicit_read_steps_are_parallel(self):
+        self.assertEqual("read_text", webapp._coord_step("read:a.md")[0])
+        self.assertEqual("list_dir", webapp._coord_step("list:.")[0])
+        self.assertEqual("agent_step", webapp._coord_step("写报告")[0])
 
     def test_verifier_file_and_exit(self):
         (PATHS.WORKSPACE / "a.md").write_text("hello world", encoding="utf-8")
