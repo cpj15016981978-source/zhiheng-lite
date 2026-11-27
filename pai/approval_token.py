@@ -21,29 +21,15 @@ CAPABILITY = {
 
 _LOCK = threading.Lock()
 _TOKENS = {}
-_PENDING = {}
 TTL_SECONDS = 120
 PENDING = pathlib.Path(os.environ.get("PAI_DATA_DIR") or (pathlib.Path(os.environ.get("LOCALAPPDATA") or (pathlib.Path.home() / "AppData" / "Local")) / "Zhiheng" / "data")) / "approval_pending.json"
-
-
-def _load_pending():
-    try:
-        if PENDING.exists():
-            for r in json.loads(PENDING.read_text(encoding="utf-8")):
-                if not isinstance(r, dict):
-                    continue
-                rid = r.get("id") or ""
-                if rid and r.get("expires", 0) > _now() and not r.get("used"):
-                    _PENDING[rid] = dict(r)
-    except Exception:
-        pass
 
 
 def _save_pending():
     try:
         PENDING.parent.mkdir(parents=True, exist_ok=True)
         rows = []
-        for rec in list(_TOKENS.values()) + list(_PENDING.values()):
+        for rec in list(_TOKENS.values()):
             if rec.get("used"):
                 continue
             rows.append({k: rec.get(k) for k in ("id", "kind", "detail", "expires", "bind", "action")})
@@ -56,7 +42,7 @@ def _save_pending():
 def pending():
     with _LOCK:
         rows = {}
-        for r in list(_TOKENS.values()) + list(_PENDING.values()):
+        for r in list(_TOKENS.values()):
             if r.get("used"):
                 continue
             rows[r.get("id")] = r
@@ -72,7 +58,7 @@ def take(rid):
         return None
     with _LOCK:
         token = next((t for t, rec in _TOKENS.items() if rec.get("id") == rid), "")
-        rec = _TOKENS.get(token) if token else _PENDING.get(rid)
+        rec = _TOKENS.get(token) if token else None
         if not rec or rec.get("used"):
             return None
         rec["used"] = True
@@ -96,8 +82,7 @@ def deny_id(rid):
         return False
     with _LOCK:
         token = next((t for t, rec in _TOKENS.items() if rec.get("id") == rid), "")
-        rec = _TOKENS.pop(token, None) if token else _PENDING.pop(rid, None)
-        _PENDING.pop(rid, None)
+        rec = _TOKENS.pop(token, None) if token else None
     _save_pending()
     return bool(rec)
 
@@ -148,7 +133,6 @@ def consume(token, kind, bind=None):
 def clear():
     with _LOCK:
         _TOKENS.clear()
-        _PENDING.clear()
 
 
-_load_pending()
+

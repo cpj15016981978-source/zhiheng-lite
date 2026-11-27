@@ -44,6 +44,7 @@ import secrets
 import traceback
 import urllib.error
 import urllib.parse
+import uuid
 import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
