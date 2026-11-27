@@ -34,7 +34,7 @@ def build(root, out=None, with_python=False):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default=r"D:\ZhihengInstall")
+    ap.add_argument("--root", default=os.environ.get("PAI_INSTALL") or str(pathlib.Path.home() / "ZhihengInstall"))
     ap.add_argument("--out", default="")
     ap.add_argument("--with-python", action="store_true")
     a = ap.parse_args()

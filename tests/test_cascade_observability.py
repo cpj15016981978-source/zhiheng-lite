@@ -9,13 +9,17 @@ import tempfile
 import unittest
 from unittest import mock
 
-BUILD = pathlib.Path(r"D:\ZhihengBuild")
-INSTALL = pathlib.Path(r"D:\ZhihengInstall")
-SRC = pathlib.Path(r"D:\DSH\chuixue_desktop")
+SRC = pathlib.Path(os.environ.get("PAI_SRC") or pathlib.Path(__file__).resolve().parents[1])
+INSTALL = pathlib.Path(os.environ.get("PAI_INSTALL") or SRC)
+BUILD = pathlib.Path(os.environ.get("PAI_BUILD") or SRC)
 
 # 按文件路径加载独立脚本，绕开 sys.modules 里被别的测试缓存的 pai 包
-_spec = importlib.util.spec_from_file_location(
-    "cascade_stats_under_test", INSTALL / "spine" / "tools" / "cascade_stats.py")
+_stats = INSTALL / "spine" / "tools" / "cascade_stats.py"
+if not _stats.is_file():
+    _stats = SRC / "tools" / "cascade_stats.py"
+if not _stats.is_file():
+    raise unittest.SkipTest("cascade_stats.py 不在 %s" % _stats)
+_spec = importlib.util.spec_from_file_location("cascade_stats_under_test", _stats)
 CS = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(CS)
 
@@ -40,6 +44,10 @@ def _rec(route, ok, chosen, degraded=False, prompt="测试输入", chosen_model=
 
 
 class TraceWiring(unittest.TestCase):
+    def setUp(self):
+        if not (INSTALL / "spine" / "pai" / "orchestrator.py").is_file():
+            self.skipTest("安装目录不存在；这是旧安装布局测试")
+
     def test_cascade_decision_enters_trace(self):
         for p in (INSTALL / "spine" / "pai" / "orchestrator.py",
                   BUILD / "spine" / "pai" / "orchestrator.py"):

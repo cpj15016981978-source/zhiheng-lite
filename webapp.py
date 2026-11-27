@@ -165,6 +165,13 @@ def _agentd_available():
             return r.status == 200
     except Exception:
         return False
+GATED_PREFIXES = (
+    "/api/approval", "/api/approvals", "/api/files/", "/api/plans/",
+    "/api/inbox/", "/api/tools/", "/api/qwen_agent/", "/api/providers",
+    "/api/custom_models", "/api/models/", "/api/network/", "/api/desktop/",
+    "/api/browser/", "/api/mcp/", "/api/code/", "/api/persona/",
+    "/api/agents/", "/api/jobs/", "/api/workspaces/", "/api/memory_candidates/",
+)
 UI_NONCE_FIXED = (os.environ.get("PAI_UI_NONCE") or "").strip()
 UI_NONCE = UI_NONCE_FIXED or secrets.token_urlsafe(32)
 
@@ -568,10 +575,17 @@ class Handler(BaseHTTPRequestHandler):
         return True
 
     def _html(self, body):
-        if UI_NONCE_FIXED:
-            return body  # 桌面壳会通过 evaluate_js 注入 nonce，不写进 HTML
         try:
-            return body.replace(b"</head>", ('<script>window.__DSH_NONCE__="%s";</script></head>' % UI_NONCE).encode("utf-8"))
+            script = (
+                '<script>(function(){var f=window.fetch;window.fetch=function(i,o){o=o||{};'
+                'var u=typeof i==="string"?i:(i&&i.url)||"";var m=(o.method||"GET").toUpperCase();'
+                'if(m!=="GET"&&m!=="HEAD"&&u.indexOf("/api/")===0){o.headers=o.headers||{};'
+                'if(window.__DSH_NONCE__)o.headers["X-DSH-Nonce"]=window.__DSH_NONCE__;}'
+                'return f(i,o);};})();</script>'
+            )
+            if not UI_NONCE_FIXED:
+                script = '<script>window.__DSH_NONCE__="%s";</script>' % UI_NONCE + script
+            return body.replace(b"</head>", (script + "</head>").encode("utf-8"))
         except Exception:
             return body
 
@@ -1244,6 +1258,9 @@ class Handler(BaseHTTPRequestHandler):
         if code:
             self._send(code, {"error": err})
             return
+        if any(self.path.split("?", 1)[0].startswith(x) for x in GATED_PREFIXES):
+            if not self._ui_gate():
+                return
         try:
             if self.path == "/v1/chat/completions":
                 key = _local_api_key()

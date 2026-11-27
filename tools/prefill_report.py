@@ -13,7 +13,9 @@ except Exception:
     pass
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-TRACE_DIRS = [ROOT / "data" / "traces", pathlib.Path(r"D:\ZhihengInstall\spine\data\traces")]
+TRACE_DIRS = [ROOT / "data" / "traces"]
+if os.environ.get("PAI_TRACE_DIR"):
+    TRACE_DIRS.append(pathlib.Path(os.environ["PAI_TRACE_DIR"]))
 
 
 def _rows(days=7, last=30):

@@ -8,8 +8,8 @@ import sys
 import unittest
 from unittest import mock
 
-INSTALL = pathlib.Path(r"D:\ZhihengInstall")
 SRC = pathlib.Path(__file__).resolve().parents[1]
+INSTALL = pathlib.Path(os.environ.get("PAI_INSTALL") or SRC)
 
 from pai import local_cascade as LC  # noqa: E402
 
