@@ -497,10 +497,13 @@ def _busy_mark():
 
 def _version():
     try:
-        p = Path(__file__).resolve().parent.parent / "version.json"
-        return json.loads(p.read_text(encoding="utf-8")).get("version", "")
+        here = Path(__file__).resolve().parent
+        for p in (here / "version.json", here.parent / "version.json"):
+            if p.is_file():
+                return json.loads(p.read_text(encoding="utf-8")).get("version", "")
     except Exception:
-        return ""
+        pass
+    return ""
 
 
 def _busy_clear():
@@ -531,7 +534,9 @@ def _approval_ok(payload, kind):
 
 class Handler(BaseHTTPRequestHandler):
     try:
-        _vp = Path(__file__).resolve().parent.parent / "version.json"
+        _vp = Path(__file__).resolve().parent / "version.json"
+        if not _vp.is_file():
+            _vp = Path(__file__).resolve().parent.parent / "version.json"
         server_version = "PAI/" + json.loads(_vp.read_text(encoding="utf-8")).get("version", "1.1.0")
     except Exception:
         server_version = "PAI/1.1.0"
@@ -1306,6 +1311,7 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     out = M10.complete(prompt, opts={"temperature": temperature,
                                                      "max_tokens": max_tokens})
+                    MU.record(out)
                     text = str((out[0] or {}).get("output") or "") if out else ""
                 except Exception as e:
                     self._send(500, {"error": {"message": "%s: %s" % (type(e).__name__, e), "type": "server_error"}})
@@ -1315,9 +1321,9 @@ class Handler(BaseHTTPRequestHandler):
                                  "created": int(time.time()), "model": model,
                                  "choices": [{"index": 0, "message": {"role": "assistant", "content": text},
                                               "finish_reason": "stop"}],
-                                 "usage": {"prompt_tokens": max(1, len(prompt) // 2),
-                                           "completion_tokens": max(1, len(text) // 2),
-                                           "total_tokens": max(1, (len(prompt) + len(text)) // 2)}})
+                                 "usage": {"prompt_tokens": max(1, int((out[0] or {}).get("prompt_tokens") or len(prompt) // 2) if out else 1),
+                                           "completion_tokens": max(1, int((out[0] or {}).get("completion_tokens") or len(text) // 2) if out else 1),
+                                           "total_tokens": max(1, int((out[0] or {}).get("tokens") or (len(prompt) + len(text)) // 2) if out else 1)}})
                 return
             if self.path == "/api/events":
                 text = str(payload.get("text") or "").strip()
@@ -2162,6 +2168,16 @@ class Handler(BaseHTTPRequestHandler):
                     out = JR.create_file_proposal(payload.get("filename"), payload.get("content"),
                                                   payload.get("id") or "", int(payload.get("step_index") or 0))
                     self._send(200, out)
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/skills/read":
+                if not self._ui_gate():
+                    return
+                try:
+                    out = SL.SkillLibrary(PF.skills_dir(), include_builtin=True).body(
+                        str(payload.get("name") or ""))
+                    self._send(200, {"ok": True, **out})
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return

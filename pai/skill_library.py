@@ -164,6 +164,20 @@ class SkillLibrary:
     def index(self, query, limit=1):
         return [self.brief(s) for s in self.find(query, limit)]
 
+    def body(self, name):
+        """按名字读全文；只从技能目录读，不接任意路径。"""
+        for d, builtin in self._dirs():
+            try:
+                s = self._read(d, builtin)
+            except SkillError:
+                continue
+            if str(s.get("name")) == str(name):
+                if not builtin and not enabled():
+                    raise SkillError("用户技能未开启")
+                return {"name": name, "body": s.get("_body") or "",
+                        "path": "skills/%s/SKILL.md" % name, "builtin": bool(builtin)}
+        raise SkillError("没有技能：%s" % name)
+
     def load(self, name, allow_draft=False):
         if not enabled():
             raise SkillError("PAI_SKILLS 未开")
