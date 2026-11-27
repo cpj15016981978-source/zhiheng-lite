@@ -6,6 +6,16 @@ import pathlib
 
 from . import paths as PATHS
 
+CAPABILITY = {
+    "name": "可验证结果",
+    "switch_env": "NONE",
+    "default_on": True,
+    "stores_user_text": False,
+    "network": False,
+    "degrade": "文件/退出码检查失败=返回 ok:false，不执行命令、不伪造通过",
+    "approval": "ADR-046：只读校验，不新增开关",
+}
+
 
 def _safe(rel):
     p = (PATHS.WORKSPACE / str(rel or "")).resolve()
