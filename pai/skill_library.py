@@ -153,6 +153,17 @@ class SkillLibrary:
         scored.sort(key=lambda x: -x[0])
         return [s for _n, s in scored[:limit]]
 
+    def brief(self, skill):
+        """只给索引字段：名/描述/何时/相对路径，不返回正文。"""
+        name = str(skill.get("name") or "")
+        return {"name": name, "description": str(skill.get("description") or ""),
+                "when": str(skill.get("when") or ""),
+                "path": "skills/%s/SKILL.md" % name,
+                "builtin": bool(skill.get("_builtin"))}
+
+    def index(self, query, limit=1):
+        return [self.brief(s) for s in self.find(query, limit)]
+
     def load(self, name, allow_draft=False):
         if not enabled():
             raise SkillError("PAI_SKILLS 未开")

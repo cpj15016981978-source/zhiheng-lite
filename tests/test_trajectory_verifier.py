@@ -8,6 +8,8 @@ import unittest
 from pai import paths as PATHS
 from pai import job_runner as JR
 from pai import verifier as VF
+from pai import job_worker as JW
+from unittest import mock
 import webapp
 
 
@@ -53,6 +55,18 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual("read_text", webapp._coord_step("read:a.md")[0])
         self.assertEqual("list_dir", webapp._coord_step("list:.")[0])
         self.assertEqual("agent_step", webapp._coord_step("写报告")[0])
+
+    def test_agent_step_usage_is_recorded_in_result(self):
+        job = {"id": "j", "title": "一步", "prompt": "一步", "action_type": "agent_step",
+               "action_payload": {"goal": "g", "step": "s"}, "depends_on": "", "step_index": 0,
+               "plan_id": ""}
+        fake = [{"output": "做完了", "tokens": 7, "cost": 0.03}]
+        with mock.patch.object(JW.AIP, "complete", return_value=fake), \
+             mock.patch.object(JW.MU, "record") as rec:
+            out = JW._execute(job)
+        self.assertEqual(0.03, out["cost"])
+        self.assertEqual(7, out["usage"]["tokens"])
+        rec.assert_called_once()
 
     def test_verifier_file_and_exit(self):
         (PATHS.WORKSPACE / "a.md").write_text("hello world", encoding="utf-8")

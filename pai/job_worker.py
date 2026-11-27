@@ -17,6 +17,7 @@ from pai import roi as ROI
 from pai import roi as ROI
 from pai import job_runner as JR
 from pai import verifier as VF
+from pai import model_usage as MU
 from pai import model_gateway as M10
 from pai import ai_provider as AIP
 
@@ -108,6 +109,12 @@ def _execute(job):
                JR.untrusted_text("步骤", step))
         )
         outs = AIP.complete(prompt)
+        try:
+            MU.record(outs)
+        except Exception:
+            pass
+        usage = {"tokens": sum(int(x.get("tokens") or 0) for x in (outs or []) if isinstance(x, dict)),
+                 "cost": sum(float(x.get("cost") or 0) for x in (outs or []) if isinstance(x, dict))}
         text = str(outs[0].get("output") or "") if outs else ""
         proposals = []
         for m in re.finditer(r"\[写文件:\s*([^\]]+)\]\s*\n(.*?)\[/写文件\]", text, re.S):
@@ -128,7 +135,8 @@ def _execute(job):
             except Exception as e:
                 proposals.append({"error": "%s: %s" % (type(e).__name__, e)})
         return {"ok": bool(text), "action": "agent_step", "step": step,
-                "result": text[:8000], "file_proposals": proposals}
+                "result": text[:8000], "file_proposals": proposals,
+                "usage": usage, "cost": usage["cost"]}
     if typ == "summarize_file":
         p = _safe_path(payload.get("path"))
         if not p.is_file():
@@ -139,9 +147,15 @@ def _execute(job):
                   "1. 最近一条记录\n2. 今天该做什么\n3. 有没有卡住/风险\n"
                   "不超过 220 字。\n" + JR.untrusted_text("发布记录", text))
         outs = AIP.complete(prompt)
+        try:
+            MU.record(outs)
+        except Exception:
+            pass
+        usage = {"tokens": sum(int(x.get("tokens") or 0) for x in (outs or []) if isinstance(x, dict)),
+                 "cost": sum(float(x.get("cost") or 0) for x in (outs or []) if isinstance(x, dict))}
         summary = str(outs[0].get("output") or "") if outs else ""
         return {"ok": bool(summary), "action": "summarize_file", "path": str(p),
-                "chars": len(text), "summary": summary[:4000]}
+                "chars": len(text), "summary": summary[:4000], "usage": usage, "cost": usage["cost"]}
     raise ValueError("动作不在白名单：%s" % typ)
 
 

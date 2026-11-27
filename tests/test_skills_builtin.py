@@ -28,9 +28,12 @@ class BuiltinSkillTest(unittest.TestCase):
         with self.assertRaises(SL.SkillError):
             lib.approve("planning")
 
-    def test_webapp_injects_matched_skill(self):
+    def test_webapp_injects_matched_skill_index_only(self):
         import webapp
-        self.assertIn("planning", webapp._skill_rule("帮我写一份周报"))
+        rule = webapp._skill_rule("帮我写一份周报")
+        self.assertIn("planning", rule)
+        self.assertIn("路径：skills/planning/SKILL.md", rule)
+        self.assertNotIn("# 日常对话", rule)
         self.assertEqual(webapp._skill_rule("今天天气"), "")
 
 

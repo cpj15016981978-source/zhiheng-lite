@@ -799,6 +799,10 @@ class Memory:
         if not q:
             return {"query": q, "items": []}
         tokens = _tokens(q)
+        try:
+            semantic_min = max(0.0, min(1.0, float(os.environ.get("PAI_SEMANTIC_MIN", "0.15"))))
+        except (TypeError, ValueError):
+            semantic_min = 0.15
         items, seen = [], set()
 
         def age_days(ts):
@@ -842,7 +846,7 @@ class Memory:
                 rel = float(it.get("relevance") or 0)
                 text = str(it.get("text") or it.get("summary") or "")
                 lexical = any(t and t in text.lower() for t in tokens)
-                if rel < 0.15 and not lexical:
+                if rel < semantic_min and not lexical:
                     continue
                 add("semantic", text, "semantic",
                     it.get("created_at"), rel,
@@ -858,7 +862,7 @@ class Memory:
             except Exception:
                 pass
         items.sort(key=lambda x: x["score"], reverse=True)
-        return {"query": q, "items": items[:int(limit)]}
+        return {"query": q, "items": items[:int(limit)], "semantic_min": semantic_min}
 
     def auto_scan(self, conv_store, profile, limit=200):
         """扫聊天，只生成候选；不自动写 facts。"""

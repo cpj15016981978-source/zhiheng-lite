@@ -328,16 +328,15 @@ def _emotion_rule(text):
 
 def _skill_rule(text):
     try:
-        hits = SL.SkillLibrary(PF.skills_dir(), include_builtin=True).find(text, 1)
-        if not hits:
+        idx = SL.SkillLibrary(PF.skills_dir(), include_builtin=True).index(text, 1)
+        if not idx:
             return ""
-        sk = hits[0]
-        body = str(sk.get("_body") or "").strip()
-        if body.startswith("---") and body.count("---") >= 2:
-            body = body.split("---", 2)[2].lstrip()
-        # 只注入命中的一个技能，截断，避免把技能库整本塞进提示词。
-        body = body[:1800]
-        return "[本轮技能：%s]\n%s" % (sk.get("name") or "skill", body)
+        sk = idx[0]
+        # 只注入索引，不把 SKILL.md 全文塞进提示词；需要时由人/调用方再读路径。
+        return ("[本轮技能索引]\n- %s：%s\n  何时：%s\n  路径：%s\n"
+                "（只读索引，不自动展开全文）" % (
+                    sk.get("name") or "skill", sk.get("description") or "",
+                    sk.get("when") or "", sk.get("path") or ""))
     except Exception:
         return ""
 

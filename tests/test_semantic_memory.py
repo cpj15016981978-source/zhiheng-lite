@@ -28,6 +28,19 @@ class SemanticMemoryTest(unittest.TestCase):
         texts = [x.get("text", "") for x in out["items"]]
         self.assertTrue(any("周报" in t for t in texts))
         self.assertFalse(any("合同" in t for t in texts), "无关的语义行不应混进来")
+        self.assertEqual(0.15, out["semantic_min"])
+
+    def test_semantic_min_is_configurable(self):
+        old = os.environ.get("PAI_SEMANTIC_MIN")
+        os.environ["PAI_SEMANTIC_MIN"] = "0.8"
+        try:
+            out = self.mem.hybrid_search("周报", limit=10)
+            self.assertEqual(0.8, out["semantic_min"])
+        finally:
+            if old is None:
+                os.environ.pop("PAI_SEMANTIC_MIN", None)
+            else:
+                os.environ["PAI_SEMANTIC_MIN"] = old
 
 
 if __name__ == "__main__":
