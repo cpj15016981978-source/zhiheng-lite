@@ -5,6 +5,7 @@
 
 平台与依赖（先看这段）
 --------
+- 顺序协调者：`/coordinator`；目标拆步、每步审批执行、结果留痕。
 - 本地 OpenAI 兼容口：`POST /v1/chat/completions`、`GET /v1/models`、`GET /v1/status`，仅回环；标准客户端可直接接 `http://127.0.0.1:8753`。
 - 推荐启动：双击 `start.bat`（ASCII 文件名，zipball 下载不会乱码）；接真实模型用 `start-live.bat`，双模型用 `start-dual.bat`。
 - 独立窗口：双击 `start-window.bat`，用 Edge/Chrome 的 `--app` 打开，无地址栏；本质仍是本地网页窗口。

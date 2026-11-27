@@ -465,6 +465,8 @@ def _misc(text, mem=None):
                  m.get("avg_latency", 0)))
     if text in ("规划页面", "计划"):
         return "规划页面：http://127.0.0.1:8753/plans"
+    if text in ("协调者", "协调"):
+        return "协调者：http://127.0.0.1:8753/coordinator"
     if text == "规划":
         from pai import job_runner as JR
         rows = JR.list_plans(10)

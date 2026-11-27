@@ -224,6 +224,7 @@ PAGES = {
     "/chat": "chat.html", "/approvals": "approvals.html",
     "/templates": "templates.html", "/graph": "graph.html",
     "/mcp": "mcp.html", "/plans": "plans.html", "/files": "files.html",
+    "/coordinator": "coordinator.html",
     "/security": "security.html", "/usage": "usage.html",
     "/audit": "audit.html", "/memory": "memory.html",
 }
@@ -630,6 +631,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"object": "list", "data": [{"id": M10.active_provider(), "object": "model", "owned_by": "zhiheng"}]})
         elif self.path == "/v1/status":
             self._send(200, {"ok": True, "model": M10.active_provider(), "approval_mode": os.environ.get("PAI_APPROVAL_MODE", "ledger")})
+        elif self.path == "/api/coordinator/status":
+            pid = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("id", [""])[0]
+            plan = JR.get_plan(str(pid)) if pid else None
+            self._send(200, {"ok": True, "plan": plan, "jobs": JR.plan_jobs(str(pid)) if plan else []})
         elif self.path == "/api/plans":
             out = []
             for p in JR.list_plans(20):
@@ -2151,6 +2156,58 @@ class Handler(BaseHTTPRequestHandler):
                     out = JR.create_file_proposal(payload.get("filename"), payload.get("content"),
                                                   payload.get("id") or "", int(payload.get("step_index") or 0))
                     self._send(200, out)
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/coordinator/start":
+                if not self._ui_gate():
+                    return
+                try:
+                    goal = str(payload.get("goal") or "").strip()
+                    if not goal:
+                        raise ValueError("目标不能为空")
+                    steps = payload.get("steps") or []
+                    if isinstance(steps, str):
+                        steps = [x.strip() for x in steps.splitlines() if x.strip()]
+                    if not steps:
+                        out = M10.complete("把目标拆成 3-6 个可执行步骤，只输出编号列表：%s" % goal)
+                        raw = str((out[0] or {}).get("output") or "") if out else ""
+                        steps = [re.sub(r"^\s*\d+[.、)]\s*", "", x).strip()
+                                 for x in raw.splitlines() if x.strip()][:6]
+                    if not steps:
+                        raise ValueError("没有拆出步骤")
+                    plan = JR.create_plan(goal, steps)
+                    prev = ""
+                    ids = []
+                    for i, step in enumerate(steps):
+                        job = JR.create("协调：" + step[:80], prompt=step, agent="coordinator",
+                                        action_type="agent_step",
+                                        action_payload={"goal": goal, "step": step},
+                                        depends_on=prev, plan_id=plan["id"], step_index=i)
+                        ids.append(job["id"]); prev = job["id"]
+                    JR.update_plan(plan["id"], "created")
+                    EG.audit("coordinator_start", "medium", "allow", plan["id"], ",".join(ids))
+                    self._send(200, {"ok": True, "id": plan["id"], "steps": steps, "jobs": ids})
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/coordinator/step":
+                if not self._ui_gate():
+                    return
+                try:
+                    pid = str(payload.get("id") or "")
+                    jobs = [x for x in JR.plan_jobs(pid) if x.get("status") == "pending"]
+                    if not jobs:
+                        raise ValueError("没有待执行步骤")
+                    j = jobs[0]
+                    if j.get("depends_on") and (JR.get(j["depends_on"]) or {}).get("status") != "done":
+                        raise ValueError("上一步未完成")
+                    if not _native_confirm("协调者执行", "确认执行下一步？"):
+                        raise ValueError("用户取消了系统确认")
+                    JR.approve(j["id"], "Boss")
+                    out = JW.run_once(dry_run=False)
+                    self._send(200, {"ok": True, "job": JR.get(j["id"]), "result": out,
+                                     "plan": JR.get_plan(pid), "jobs": JR.plan_jobs(pid)})
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知衡 · 协调者</title>
+<style>
+body{margin:0;background:#f5f2ec;color:#2a2722;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:24px}
+h1{font-size:18px;margin:0 0 4px}p{color:#80776a;font-size:12px;margin:0 0 16px}
+.card{background:#fff;border:1px solid #d9d1c2;border-radius:10px;padding:14px;margin:10px 0}
+input,textarea{width:100%;box-sizing:border-box;padding:8px;border:1px solid #d9d1c2;border-radius:8px;background:#fff;margin:4px 0}
+textarea{min-height:90px;font-family:inherit}
+button{border:1px solid #8a5a2b;background:#fff;color:#8a5a2b;border-radius:8px;padding:7px 12px;cursor:pointer}
+button.primary{background:#8a5a2b;color:#fff}
+.step{padding:8px 0;border-top:1px solid #eee;font-size:12px}
+.muted{color:#80776a;font-size:12px}.ok{color:#0d6b3b}.bad{color:#a3342a}
+pre{white-space:pre-wrap;font-size:12px;background:#f7f5f0;padding:8px;border-radius:8px;max-height:220px;overflow:auto}
+</style></head>
+<body><main>
+<h1>协调者</h1>
+<p>顺序协调：目标 → 拆步骤 → 每步批准执行 → 结果与验收。写文件仍走 /files 审批。</p>
+<div class="card">
+  <input id="goal" placeholder="目标，例如：整理本周会议纪要并生成周报" />
+  <textarea id="steps" placeholder="可选：每行一个步骤；留空则由模型拆 3-6 步"></textarea>
+  <button class="primary" id="start">生成协调计划</button>
+  <span id="msg" class="muted"></span>
+</div>
+<div class="card" id="planCard" hidden>
+  <b id="planTitle"></b> <span id="planState" class="muted"></span>
+  <div id="stepsList"></div>
+  <button class="primary" id="next">执行下一步</button>
+  <div id="result"></div>
+</div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let current='';
+async function api(path, body){
+  const r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  const d=await r.json(); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); return d;
+}
+function render(d){
+  const p=d.plan||d; if(!p||!p.id){return}
+  current=p.id; $('#planCard').hidden=false;
+  $('#planTitle').textContent=p.goal||'协调计划'; $('#planState').textContent='['+(p.status||'')+']';
+  const jobs=d.jobs||[];
+  $('#stepsList').innerHTML=jobs.map((j,i)=>'<div class="step"><b>'+(i+1)+'</b> ['+esc(j.status)+'] '+esc(j.title)+
+    (j.result?'<div class="muted">'+esc(String(j.result).slice(0,300))+'</div>':'')+'</div>').join('')||'<div class="muted">尚无作业</div>';
+}
+$('#start').onclick=async()=>{
+  const goal=$('#goal').value.trim(); if(!goal){$('#msg').textContent='先写目标';return}
+  $('#msg').textContent='拆解中…';
+  try{const d=await api('/api/coordinator/start',{goal,steps:$('#steps').value});$('#msg').textContent='已生成 '+d.steps.length+' 步';render(await api('/api/coordinator/status?id='+encodeURIComponent(d.id)))}
+  catch(e){$('#msg').textContent='失败：'+e.message}
+};
+$('#next').onclick=async()=>{if(!current)return;$('#result').textContent='执行中…';try{const d=await api('/api/coordinator/step',{id:current});$('#result').innerHTML='<pre>'+esc(JSON.stringify(d.result,null,2))+'</pre>';render(d)}catch(e){$('#result').textContent='失败：'+e.message}};
+</script></body></html>
