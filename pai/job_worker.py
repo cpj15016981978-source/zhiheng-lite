@@ -16,6 +16,7 @@ from pai import agent_registry as AR
 from pai import roi as ROI
 from pai import roi as ROI
 from pai import job_runner as JR
+from pai import verifier as VF
 from pai import model_gateway as M10
 from pai import ai_provider as AIP
 
@@ -380,6 +381,14 @@ def run_once(dry_run=True):
     t0 = time.time()
     try:
         out = _execute(job)
+        verify_spec = (job.get("action_payload") or {}).get("verify")
+        if verify_spec:
+            ver = VF.verify(verify_spec, out)
+            out = dict(out) if isinstance(out, dict) else {"result": out}
+            out["verification"] = ver
+            JR.add_event(job["id"], "verified", ver)
+            if not ver.get("ok"):
+                raise ValueError("验收未通过：" + str(ver.get("checks"))[:500])
         dep = job.get("depends_on") or ""
         if dep:
             prev = JR.get(dep) or {}
@@ -387,6 +396,8 @@ def run_once(dry_run=True):
             out["upstream"] = {"id": dep, "status": prev.get("status"),
                                "result": str(prev.get("result") or "")[:2000]}
         JR.finish(job["id"], json.dumps(out, ensure_ascii=False)[:4000])
+        JR.add_event(job["id"], "metrics", {"duration_ms": int((time.time() - t0) * 1000),
+                                            "cost": float((out or {}).get("cost") or 0)})
         try:
             ROI.record(job_id=job["id"], workspace_id=job.get("workspace_id") or "",
                        agent_id=job.get("agent_id") or "",

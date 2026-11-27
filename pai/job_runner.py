@@ -218,6 +218,15 @@ def events(job_id):
                 for r in c.execute("SELECT * FROM job_events WHERE job_id=? ORDER BY seq", (job_id,))]
 
 
+def add_event(job_id, typ, payload=None):
+    """给作业追加一条轨迹事件（不改状态）。"""
+    with closing(_conn()) as c, c:
+        if not c.execute("SELECT 1 FROM jobs WHERE id=?", (str(job_id),)).fetchone():
+            raise KeyError(job_id)
+        _add(c, str(job_id), str(typ or "event"), payload or {})
+    return True
+
+
 def _set(job_id, status, event, payload=None, result=None, error=None):
     with closing(_conn()) as c, c:
         row = c.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
@@ -388,6 +397,49 @@ def update_plan(pid, status):
     with closing(_conn()) as c, c:
         c.execute("UPDATE plans SET status=?, updated_at=? WHERE id=?", (str(status), _now(), str(pid)))
     return get_plan(pid)
+
+
+def trajectory(plan_id):
+    """把计划、作业、事件合成一条可读轨迹。"""
+    plan = get_plan(plan_id)
+    if not plan:
+        return {"ok": False, "error": "没有计划", "plan": None, "steps": [], "events": []}
+    steps = []
+    all_events = []
+    for j in plan_jobs(plan_id):
+        ev = events(j["id"])
+        all_events.extend(ev)
+        duration = 0
+        cost = 0
+        for e in ev:
+            pl = e.get("payload") or {}
+            duration = max(duration, int(pl.get("duration_ms") or 0))
+            cost = max(cost, float(pl.get("cost") or 0))
+        steps.append({
+            "job_id": j["id"], "step_index": j.get("step_index"), "title": j.get("title"),
+            "status": j.get("status"), "attempts": j.get("attempts"),
+            "input": {"prompt": j.get("prompt"), "action": j.get("action_type"),
+                      "payload": j.get("action_payload")},
+            "result": j.get("result"), "error": j.get("error"),
+            "duration_ms": duration, "cost": cost,
+            "events": ev,
+        })
+    return {"ok": True, "plan": plan, "steps": steps, "events": all_events}
+
+
+def resume_plan(plan_id):
+    """把失败步骤恢复为 pending，保留历史事件；不自动执行。"""
+    n = 0
+    with closing(_conn()) as c, c:
+        rows = c.execute("SELECT * FROM jobs WHERE plan_id=? AND status='failed'", (str(plan_id),)).fetchall()
+        for r in rows:
+            c.execute("UPDATE jobs SET status='pending', error='', approved=0, approved_by='', updated_at=? WHERE id=?",
+                      (_now(), r["id"]))
+            _add(c, r["id"], "resumed_by_user", {"attempts": int(r["attempts"] or 0)})
+            n += 1
+        if n:
+            c.execute("UPDATE plans SET status='running', updated_at=? WHERE id=?", (_now(), str(plan_id)))
+    return {"ok": bool(n), "resumed": n, "plan": get_plan(plan_id)}
 
 
 def plan_jobs(plan_id):

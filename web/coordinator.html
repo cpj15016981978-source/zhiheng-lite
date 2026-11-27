@@ -27,6 +27,8 @@ pre{white-space:pre-wrap;font-size:12px;background:#f7f5f0;padding:8px;border-ra
   <b id="planTitle"></b> <span id="planState" class="muted"></span>
   <div id="stepsList"></div>
   <button class="primary" id="next">执行下一步</button>
+  <button id="resume">恢复失败步骤</button>
+  <div id="trajectory"></div>
   <div id="result"></div>
 </div>
 </main>
@@ -45,6 +47,9 @@ function render(d){
   const jobs=d.jobs||[];
   $('#stepsList').innerHTML=jobs.map((j,i)=>'<div class="step"><b>'+(i+1)+'</b> ['+esc(j.status)+'] '+esc(j.title)+
     (j.result?'<div class="muted">'+esc(String(j.result).slice(0,300))+'</div>':'')+'</div>').join('')||'<div class="muted">尚无作业</div>';
+  const tr=(d.trajectory||{}).steps||[];
+  $('#trajectory').innerHTML=tr.length?'<div class="muted">轨迹</div>'+tr.map(t=>'<div class="step">['+esc(t.status)+'] '+
+    esc(t.title)+' · '+esc(t.duration_ms)+'ms · cost '+esc(t.cost)+'<pre>'+esc(JSON.stringify(t.events||[],null,1))+'</pre></div>').join(''):'';
 }
 $('#start').onclick=async()=>{
   const goal=$('#goal').value.trim(); if(!goal){$('#msg').textContent='先写目标';return}
@@ -52,5 +57,6 @@ $('#start').onclick=async()=>{
   try{const d=await api('/api/coordinator/start',{goal,steps:$('#steps').value});$('#msg').textContent='已生成 '+d.steps.length+' 步';render(await api('/api/coordinator/status?id='+encodeURIComponent(d.id)))}
   catch(e){$('#msg').textContent='失败：'+e.message}
 };
+$('#resume').onclick=async()=>{if(!current)return;try{const d=await api('/api/coordinator/resume',{id:current});$('#result').textContent='恢复 '+d.resumed+' 步';render(await api('/api/coordinator/status?id='+encodeURIComponent(current)))}catch(e){$('#result').textContent='失败：'+e.message}};
 $('#next').onclick=async()=>{if(!current)return;$('#result').textContent='执行中…';try{const d=await api('/api/coordinator/step',{id:current});$('#result').innerHTML='<pre>'+esc(JSON.stringify(d.result,null,2))+'</pre>';render(d)}catch(e){$('#result').textContent='失败：'+e.message}};
 </script></body></html>

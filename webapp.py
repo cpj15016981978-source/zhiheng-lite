@@ -631,10 +631,11 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"object": "list", "data": [{"id": M10.active_provider(), "object": "model", "owned_by": "zhiheng"}]})
         elif self.path == "/v1/status":
             self._send(200, {"ok": True, "model": M10.active_provider(), "approval_mode": os.environ.get("PAI_APPROVAL_MODE", "ledger")})
-        elif self.path == "/api/coordinator/status":
+        elif self.path.split("?", 1)[0] == "/api/coordinator/status":
             pid = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("id", [""])[0]
             plan = JR.get_plan(str(pid)) if pid else None
-            self._send(200, {"ok": True, "plan": plan, "jobs": JR.plan_jobs(str(pid)) if plan else []})
+            self._send(200, {"ok": True, "plan": plan, "jobs": JR.plan_jobs(str(pid)) if plan else [],
+                             "trajectory": JR.trajectory(str(pid)) if plan else None})
         elif self.path == "/api/plans":
             out = []
             for p in JR.list_plans(20):
@@ -2188,6 +2189,19 @@ class Handler(BaseHTTPRequestHandler):
                     JR.update_plan(plan["id"], "created")
                     EG.audit("coordinator_start", "medium", "allow", plan["id"], ",".join(ids))
                     self._send(200, {"ok": True, "id": plan["id"], "steps": steps, "jobs": ids})
+                except Exception as e:
+                    self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
+                return
+            if self.path == "/api/coordinator/resume":
+                if not self._ui_gate():
+                    return
+                try:
+                    pid = str(payload.get("id") or "")
+                    if not _native_confirm("协调者恢复", "确认把失败步骤恢复为待执行？"):
+                        raise ValueError("用户取消了系统确认")
+                    out = JR.resume_plan(pid)
+                    EG.audit("coordinator_resume", "medium", "allow", pid, str(out.get("resumed")))
+                    self._send(200, out)
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
