@@ -47,6 +47,9 @@ __all__ = [
     "critique",
     "decide",
     "review",
+    "triage_failure",
+    "FAILURE_GATES",
+    "difficulty_band",
     "propose_principle_change",
     "apply_principle_change",
     "COOLDOWN_HOURS",
@@ -173,6 +176,75 @@ def decide(issues: list[dict[str, Any]]) -> str:
     if any(i.get("severity") == "warn" for i in issues):
         return "revise"
     return "keep"
+
+
+FAILURE_GATES = (
+    "任务存在", "产出存在", "验收标准存在", "验收标准可执行",
+    "验收器在已知样本上通过", "失败可复现", "运行环境与验收环境一致",
+    "错误有明确归属", "结论不是把任务错误归给模型",
+)
+
+
+def triage_failure(task="", criteria=None, output="", error="",
+                   known_good=False, harness_match=True):
+    """失败先验评分器：九道关，返回 verdict 与逐关证据。
+
+    verdict:
+      task_bad     任务本身缺失/不可执行
+      criteria_bad 验收标准缺失/不可执行/未先验
+      harness_bad  运行环境与验收环境不一致
+      model_bad    任务与标准都成立，产出仍未达标
+      unknown      证据不足，不归因模型
+    """
+    criteria = criteria if isinstance(criteria, list) else ([criteria] if criteria else [])
+    gates = []
+    def add(name, ok, detail=""):
+        gates.append({"gate": name, "ok": bool(ok), "detail": detail})
+    add("任务存在", bool(str(task or "").strip()), "任务为空" if not task else "")
+    add("产出存在", bool(str(output or "").strip()), "没有产出" if not output else "")
+    add("验收标准存在", bool(criteria), "没有验收标准")
+    executable = bool(criteria) and all(bool(str(x).strip()) for x in criteria)
+    add("验收标准可执行", executable, "有空标准" if criteria and not executable else "")
+    add("验收器在已知样本上通过", bool(known_good), "验收器未先验，不能先怪模型")
+    add("失败可复现", bool(str(error or "").strip()) or bool(output), "没有错误也没有产出")
+    add("运行环境与验收环境一致", bool(harness_match), "harness 不一致")
+    # 明确归属：错误为空但有产出 → 产出不达标；否则先看错误类型。
+    if any(k in str(error).lower() for k in ("import", "environment", "timeout", "harness")):
+        verdict = "harness_bad"
+    elif not str(task or "").strip() or not str(output or "").strip():
+        verdict = "task_bad"
+    elif not criteria or not executable or not known_good:
+        verdict = "criteria_bad"
+    elif not harness_match:
+        verdict = "harness_bad"
+    elif str(output or "").strip():
+        verdict = "model_bad"
+    else:
+        verdict = "unknown"
+    add("错误有明确归属", verdict != "unknown", verdict)
+    add("结论不是把任务错误归给模型", verdict != "model_bad" or (bool(task) and bool(criteria) and bool(known_good)),
+        "任务/标准未成立时不能归因模型")
+    return {"verdict": verdict, "gates": gates,
+            "blame_model": verdict == "model_bad",
+            "ok": verdict == "model_bad"}
+
+
+def difficulty_band(successes, attempts):
+    """15%–85% 才是信息量区间；永远过/永远不过都是零信号。"""
+    try:
+        n = int(attempts); k = int(successes)
+    except (TypeError, ValueError):
+        return {"rate": None, "band": "unknown"}
+    if n <= 0:
+        return {"rate": None, "band": "unknown"}
+    rate = max(0.0, min(1.0, float(k) / n))
+    if rate < 0.15:
+        band = "too_hard"
+    elif rate > 0.85:
+        band = "too_easy"
+    else:
+        band = "informative"
+    return {"rate": round(rate, 4), "band": band}
 
 
 def _score(issues: list[dict[str, Any]]) -> int:
