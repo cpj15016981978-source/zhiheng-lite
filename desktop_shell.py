@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import secrets
 import pathlib
 import sys
 import threading
@@ -103,10 +104,15 @@ class Shell:
         self.httpd = None
         self.thread = None
         self._stopped = False
+        self.nonce = ""
 
     def ensure_server(self):
         if _healthy(self.port):
             return False
+        # nonce 只在本进程内存；不写进 HTML，也不让 HTTP 页面自己生成。
+        self.nonce = secrets.token_urlsafe(32)
+        os.environ["PAI_UI_NONCE"] = self.nonce
+        os.environ["PAI_NATIVE_CONFIRM"] = "1"
         import webapp
         db = pathlib.Path(os.environ.get("LOCALAPPDATA") or pathlib.Path.home()) / "Zhiheng" / "data" / "memory.db"
         self.httpd, self.thread = webapp.start(port=self.port, db_path=str(db), quiet=True)
@@ -120,10 +126,10 @@ class Shell:
         if not self.window:
             return
         js = (
-            "try{localStorage.setItem('luwu_theme',%r);"
+            "try{window.__DSH_NONCE__=%r;localStorage.setItem('luwu_theme',%r);"
             "document.documentElement.dataset.theme=%r;"
             "document.body.style.zoom=%r;}catch(e){}"
-            % (self.theme, self.theme, "0.9" if self.compact else "1")
+            % (self.nonce, self.theme, self.theme, "0.9" if self.compact else "1")
         )
         try:
             self.window.evaluate_js(js)

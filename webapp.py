@@ -165,7 +165,39 @@ def _agentd_available():
             return r.status == 200
     except Exception:
         return False
-UI_NONCE = secrets.token_urlsafe(32)
+UI_NONCE_FIXED = (os.environ.get("PAI_UI_NONCE") or "").strip()
+UI_NONCE = UI_NONCE_FIXED or secrets.token_urlsafe(32)
+
+
+def _native_confirm(title, detail):
+    """桌面壳内高风险动作的系统级确认；非 Windows/未开启时直接放行。"""
+    if os.name != "nt" or os.environ.get("PAI_NATIVE_CONFIRM", "").strip() not in ("1", "on", "true", "yes"):
+        return True
+    try:
+        import ctypes
+        text = str(detail)[:500]
+        return ctypes.windll.user32.MessageBoxW(0, text, "知衡 · " + str(title), 0x4 | 0x40 | 0x10000) == 6
+    except Exception:
+        return False
+
+
+def _local_api_key():
+    """本地 /v1 的默认 key；首次生成，之后复用。"""
+    env = (os.environ.get("PAI_LOCAL_API_KEY") or "").strip()
+    if env:
+        return env
+    p = PATHS.DATA_DIR / "local_api_key"
+    try:
+        if p.is_file():
+            v = p.read_text(encoding="utf-8").strip()
+            if v:
+                return v
+        v = secrets.token_urlsafe(32)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(v + "\n", encoding="utf-8")
+        return v
+    except Exception:
+        return ""
 STARTUP_REPORT = {}
 
 
@@ -536,6 +568,8 @@ class Handler(BaseHTTPRequestHandler):
         return True
 
     def _html(self, body):
+        if UI_NONCE_FIXED:
+            return body  # 桌面壳会通过 evaluate_js 注入 nonce，不写进 HTML
         try:
             return body.replace(b"</head>", ('<script>window.__DSH_NONCE__="%s";</script></head>' % UI_NONCE).encode("utf-8"))
         except Exception:
@@ -574,6 +608,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(500, {"error": name + " 缺失"})
             else:
                 self._send(200, self._html(body), "text/html; charset=utf-8")
+        elif self.path == "/api/local_api_key":
+            if not self._ui_gate():
+                return
+            self._send(200, {"key": _local_api_key()})
         elif self.path == "/v1/models":
             self._send(200, {"object": "list", "data": [{"id": M10.active_provider(), "object": "model", "owned_by": "zhiheng"}]})
         elif self.path == "/v1/status":
@@ -1208,8 +1246,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             if self.path == "/v1/chat/completions":
-                key = os.environ.get("PAI_LOCAL_API_KEY", "").strip()
-                if key and self.headers.get("Authorization", "") != ("Bearer " + key):
+                key = _local_api_key()
+                require = os.environ.get("PAI_LOCAL_API_REQUIRE_KEY", "1").strip().lower() not in ("0", "off", "false", "no")
+                if require and key and self.headers.get("Authorization", "") != ("Bearer " + key):
                     self._send(401, {"error": {"message": "invalid api key", "type": "authentication_error"}})
                     return
                 msgs = payload.get("messages")
@@ -1321,6 +1360,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.path == "/api/approvals/execute":
                 if not self._ui_gate():
+                    return
+                if not _native_confirm("审批执行", "确认执行待审批动作？"):
+                    self._send(403, {"ok": False, "error": "用户取消了系统确认"})
                     return
                 rec = TOK.take(str(payload.get("id") or ""))
                 if not rec:
@@ -2098,6 +2140,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/plans/step":
                 if not self._ui_gate():
                     return
+                if not _native_confirm("规划执行", "确认执行下一步？"):
+                    self._send(403, {"ok": False, "error": "用户取消了系统确认"})
+                    return
                 try:
                     pid = str(payload.get("id") or "")
                     jobs = [x for x in JR.plan_jobs(pid) if x.get("status") == "pending"]
@@ -2116,6 +2161,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/inbox/ingest":
                 if not self._ui_gate():
                     return
+                if not _native_confirm("文档导入", "确认把收件箱文档转成待审批？"):
+                    self._send(403, {"ok": False, "error": "用户取消了系统确认"})
+                    return
                 try:
                     name, content, chars = FE.ingest_inbox(str(payload.get("name") or ""))
                     out = JR.create_file_proposal(name, content)
@@ -2125,6 +2173,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.path == "/api/files/approve":
                 if not self._ui_gate():
+                    return
+                if not _native_confirm("文件写入", "确认把文件写入 workspace？"):
+                    self._send(403, {"ok": False, "error": "用户取消了系统确认"})
                     return
                 try:
                     self._send(200, JR.approve_file_proposal(payload.get("id")))
