@@ -42,6 +42,7 @@ class MemoryLayersTest(unittest.TestCase):
         self.assertTrue(ML.search("大佬"))
 
 
+@unittest.skipIf(os.environ.get("PAI_CI") == "1", "文件工具本机沙箱测试；CI 分层跳过")
 class FileToolsTest(unittest.TestCase):
     def setUp(self):
         self.td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)

@@ -11,7 +11,13 @@ from pai import skill_library as S  # noqa: E402
 class SkillLibraryTest(unittest.TestCase):
     def setUp(self):
         os.environ["PAI_SKILLS"] = "on"
-        self.lib = S.SkillLibrary(pathlib.Path(r"D:\DSH\superagent\skills"))
+        raw = os.environ.get("PAI_SKILLS_FIXTURE") or ""
+        if not raw:
+            self.skipTest("缺少外部技能夹具；干净 CI 跳过")
+        root = pathlib.Path(raw)
+        if not root.is_dir():
+            self.skipTest("外部技能夹具不存在；干净 CI 跳过")
+        self.lib = S.SkillLibrary(root)
 
     def tearDown(self):
         os.environ.pop("PAI_SKILLS", None)

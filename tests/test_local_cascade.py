@@ -181,6 +181,7 @@ class Complete(unittest.TestCase):
             LC.complete("你好", user_text="你好", call=call)
 
 
+@unittest.skipIf(os.environ.get("PAI_CI") == "1", "安装布局测试；干净 CI 跳过")
 class Config(unittest.TestCase):
     def test_status_keys(self):
         s = LC.status()

@@ -906,6 +906,7 @@ class AgentdTest(unittest.TestCase):
         self.thread.join(timeout=5)
         self.assertFalse(self.thread.is_alive())
 
+@unittest.skipIf(os.environ.get("PAI_CI") == "1", "agentd 本机外部进程，CI 分层跳过")
 class TokenTest(unittest.TestCase):
     def setUp(self):
         import hashlib
