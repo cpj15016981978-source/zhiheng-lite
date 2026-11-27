@@ -34,5 +34,6 @@ jobs:
           $code = $LASTEXITCODE
           if ($code -ne 0) {
             Get-Content ci-tests.log | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            Get-Content ci-tests.log | Select-String -Pattern '^(FAIL|ERROR):' | ForEach-Object { Write-Host ("::error::" + $_.Line) }
             exit $code
           }
