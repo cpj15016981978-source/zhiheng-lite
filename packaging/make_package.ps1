@@ -22,6 +22,7 @@ if (-not (Test-Path (Join-Path $Py 'python.exe'))) {
   if ($LASTEXITCODE -ge 8) { throw "复制 Python 失败：$LASTEXITCODE" }
 }
 Copy-Item (Join-Path $PSScriptRoot 'install_zhiheng.ps1') (Join-Path $Out 'install_zhiheng.ps1') -Force
+Copy-Item (Join-Path $PSScriptRoot 'uninstall_zhiheng.ps1') (Join-Path $Out 'uninstall_zhiheng.ps1') -Force
 @'
 @echo off
 cd /d "%~dp0"

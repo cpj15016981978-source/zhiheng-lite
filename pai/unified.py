@@ -467,6 +467,36 @@ def _misc(text, mem=None):
         return "规划页面：http://127.0.0.1:8753/plans"
     if text in ("协调者", "协调"):
         return "协调者：http://127.0.0.1:8753/coordinator"
+    if text.startswith("协调：") or text.startswith("协调:"):
+        raw = re.sub(r"^协调[:：]\s*", "", text).strip()
+        m = re.match(r"^(状态|下一步|并行|恢复)\s*(\S*)$", raw)
+        try:
+            if m:
+                op, pid = m.group(1), m.group(2)
+                if op == "状态":
+                    d = coordinator_status(pid)
+                    if not d.get("ok"):
+                        return "没有这个协调计划：%s" % pid
+                    return "协调 %s [%s]\n%s" % (
+                        pid, (d.get("plan") or {}).get("status"),
+                        "\n".join("- [%s] %s" % (j.get("status"), j.get("title"))
+                                   for j in (d.get("jobs") or [])))
+                if op == "恢复":
+                    d = coordinator_resume(pid)
+                    return "恢复 %d 步：%s" % (int(d.get("resumed") or 0), pid)
+                if op == "并行":
+                    d = coordinator_step(pid, parallel=True)
+                else:
+                    d = coordinator_step(pid, parallel=False)
+                return "协调执行 %d 步：\n%s" % (
+                    int(d.get("parallel") or 0),
+                    "\n".join("- %s" % str((x.get("out") or {}).get("result") or x.get("out"))[:800]
+                               for x in (d.get("results") or [])))
+            explicit = raw.startswith(("read:", "list:", "summary:"))
+            d = coordinator_start(raw, [raw] if explicit else None)
+            return "已建协调 %s：\n%s" % (d["id"], "\n".join("- " + x for x in d["steps"]))
+        except Exception as e:
+            return "协调失败：%s: %s" % (type(e).__name__, e)
     if text == "规划":
         from pai import job_runner as JR
         rows = JR.list_plans(10)
@@ -653,6 +683,111 @@ def _reminder_cmd(q):
     if m:
         return add_task(m.group(1), m.group(2))
     return None
+
+
+COORD_READ_ONLY = ("read_text", "list_dir", "summarize_file")
+
+
+def coord_step(step):
+    """协调者步骤分类；只有显式只读前缀能并行。"""
+    if isinstance(step, dict):
+        text = str(step.get("text") or step.get("prompt") or "").strip()
+        action = str(step.get("action") or "agent_step")
+        payload = dict(step.get("payload") or {})
+        if action in COORD_READ_ONLY and step.get("path"):
+            payload.setdefault("path", step.get("path"))
+        return action, payload, text or action
+    text = str(step or "").strip()
+    for prefix, action in (("read:", "read_text"), ("list:", "list_dir"),
+                           ("summary:", "summarize_file")):
+        if text.lower().startswith(prefix):
+            path = text[len(prefix):].strip()
+            if path and not os.path.isabs(path):
+                path = str(paths.WORKSPACE / path)
+            return action, {"path": path}, "%s %s" % (action, path)
+    return "agent_step", {}, text
+
+
+def coordinator_start(goal, steps=None):
+    from pai import model_gateway as M10
+    from pai import job_runner as JR
+    goal = str(goal or "").strip()
+    if not goal:
+        raise ValueError("目标不能为空")
+    if isinstance(steps, str):
+        steps = [x.strip() for x in steps.splitlines() if x.strip()]
+    steps = [x for x in (steps or []) if str(x).strip()]
+    if not steps:
+        out = M10.complete("把目标拆成 3-6 个可执行步骤，只输出编号列表：%s" % goal)
+        raw = str((out[0] or {}).get("output") or "") if out else ""
+        steps = [re.sub(r"^\s*\d+[.、)]\s*", "", x).strip()
+                 for x in raw.splitlines() if x.strip()][:6]
+    if not steps:
+        raise ValueError("没有拆出步骤")
+    plan = JR.create_plan(goal, steps)
+    prev_write = ""
+    ids = []
+    for i, step in enumerate(steps):
+        action, payload, title = coord_step(step)
+        if action == "agent_step":
+            payload = {"goal": goal, "step": title}
+        job = JR.create("协调：" + title[:80], prompt=title, agent="coordinator",
+                        action_type=action, action_payload=payload,
+                        depends_on=prev_write, plan_id=plan["id"], step_index=i)
+        ids.append(job["id"])
+        if action not in COORD_READ_ONLY:
+            prev_write = job["id"]
+    JR.update_plan(plan["id"], "created")
+    return {"ok": True, "id": plan["id"], "steps": steps, "jobs": ids}
+
+
+def coordinator_status(pid):
+    from pai import job_runner as JR
+    pid = str(pid or "")
+    plan = JR.get_plan(pid) if pid else None
+    return {"ok": bool(plan), "plan": plan,
+            "jobs": JR.plan_jobs(pid) if plan else [],
+            "trajectory": JR.trajectory(pid) if plan else None}
+
+
+def coordinator_step(pid, parallel=False):
+    import concurrent.futures
+    from pai import job_runner as JR, job_worker as JW
+    pid = str(pid or "")
+    plan = JR.get_plan(pid)
+    if not plan:
+        raise ValueError("没有这个协调计划")
+    jobs = []
+    for x in JR.plan_jobs(pid):
+        if x.get("status") != "pending":
+            continue
+        dep = x.get("depends_on") or ""
+        if dep and (JR.get(dep) or {}).get("status") != "done":
+            continue
+        if parallel and x.get("action_type") not in COORD_READ_ONLY:
+            continue
+        jobs.append(x)
+    if not jobs:
+        raise ValueError("没有可执行的步骤")
+    if not parallel:
+        jobs = jobs[:1]
+    for x in jobs:
+        JR.approve(x["id"], "Boss")
+    def one(j):
+        return {"id": j["id"], "out": JW.run_once(dry_run=False, job_id=j["id"])}
+    if len(jobs) == 1:
+        results = [one(jobs[0])]
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(jobs))) as ex:
+            results = list(ex.map(one, jobs))
+    return {"ok": True, "parallel": len(jobs), "results": results,
+            "plan": JR.get_plan(pid), "jobs": JR.plan_jobs(pid),
+            "trajectory": JR.trajectory(pid)}
+
+
+def coordinator_resume(pid):
+    from pai import job_runner as JR
+    return JR.resume_plan(str(pid or ""))
 
 
 def _plan_action(step):

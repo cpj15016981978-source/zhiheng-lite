@@ -177,23 +177,9 @@ COORD_READ_ONLY = ("read_text", "list_dir", "summarize_file")
 
 
 def _coord_step(step):
-    """把一步变成 (action, payload, title)；只有显式只读前缀才并行。"""
-    if isinstance(step, dict):
-        text = str(step.get("text") or step.get("prompt") or "").strip()
-        action = str(step.get("action") or "agent_step")
-        payload = dict(step.get("payload") or {})
-        if action in ("read_text", "list_dir", "summarize_file") and step.get("path"):
-            payload.setdefault("path", step.get("path"))
-        return action, payload, text or action
-    text = str(step or "").strip()
-    for prefix, action, key in (("read:", "read_text", "path"), ("list:", "list_dir", "path"),
-                                ("summary:", "summarize_file", "path")):
-        if text.lower().startswith(prefix):
-            path = text[len(prefix):].strip()
-            if path and not os.path.isabs(path):
-                path = str(PATHS.WORKSPACE / path)
-            return action, {"path": path}, "%s %s" % (action, path)
-    return "agent_step", {}, text
+    return UNI.coord_step(step)
+
+
 UI_NONCE_FIXED = (os.environ.get("PAI_UI_NONCE") or "").strip()
 UI_NONCE = UI_NONCE_FIXED or secrets.token_urlsafe(32)
 
@@ -654,9 +640,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"ok": True, "model": M10.active_provider(), "approval_mode": os.environ.get("PAI_APPROVAL_MODE", "ledger")})
         elif self.path.split("?", 1)[0] == "/api/coordinator/status":
             pid = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("id", [""])[0]
-            plan = JR.get_plan(str(pid)) if pid else None
-            self._send(200, {"ok": True, "plan": plan, "jobs": JR.plan_jobs(str(pid)) if plan else [],
-                             "trajectory": JR.trajectory(str(pid)) if plan else None})
+            self._send(200, UNI.coordinator_status(str(pid)))
         elif self.path == "/api/plans":
             out = []
             for p in JR.list_plans(20):
@@ -2185,36 +2169,9 @@ class Handler(BaseHTTPRequestHandler):
                 if not self._ui_gate():
                     return
                 try:
-                    goal = str(payload.get("goal") or "").strip()
-                    if not goal:
-                        raise ValueError("目标不能为空")
-                    steps = payload.get("steps") or []
-                    if isinstance(steps, str):
-                        steps = [x.strip() for x in steps.splitlines() if x.strip()]
-                    if not steps:
-                        out = M10.complete("把目标拆成 3-6 个可执行步骤，只输出编号列表：%s" % goal)
-                        raw = str((out[0] or {}).get("output") or "") if out else ""
-                        steps = [re.sub(r"^\s*\d+[.、)]\s*", "", x).strip()
-                                 for x in raw.splitlines() if x.strip()][:6]
-                    if not steps:
-                        raise ValueError("没有拆出步骤")
-                    plan = JR.create_plan(goal, steps)
-                    prev_write = ""
-                    ids = []
-                    for i, step in enumerate(steps):
-                        action, spayload, stitle = _coord_step(step)
-                        if action == "agent_step":
-                            spayload = {"goal": goal, "step": stitle}
-                        job = JR.create("协调：" + stitle[:80], prompt=stitle, agent="coordinator",
-                                        action_type=action,
-                                        action_payload=spayload,
-                                        depends_on=prev_write, plan_id=plan["id"], step_index=i)
-                        ids.append(job["id"])
-                        if action not in COORD_READ_ONLY:
-                            prev_write = job["id"]
-                    JR.update_plan(plan["id"], "created")
-                    EG.audit("coordinator_start", "medium", "allow", plan["id"], ",".join(ids))
-                    self._send(200, {"ok": True, "id": plan["id"], "steps": steps, "jobs": ids})
+                    out = UNI.coordinator_start(payload.get("goal"), payload.get("steps") or [])
+                    EG.audit("coordinator_start", "medium", "allow", out["id"], ",".join(out["jobs"]))
+                    self._send(200, out)
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
@@ -2225,7 +2182,7 @@ class Handler(BaseHTTPRequestHandler):
                     pid = str(payload.get("id") or "")
                     if not _native_confirm("协调者恢复", "确认把失败步骤恢复为待执行？"):
                         raise ValueError("用户取消了系统确认")
-                    out = JR.resume_plan(pid)
+                    out = UNI.coordinator_resume(pid)
                     EG.audit("coordinator_resume", "medium", "allow", pid, str(out.get("resumed")))
                     self._send(200, out)
                 except Exception as e:
@@ -2235,29 +2192,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not self._ui_gate():
                     return
                 try:
-                    pid = str(payload.get("id") or "")
-                    jobs = []
-                    for x in JR.plan_jobs(pid):
-                        if x.get("status") != "pending":
-                            continue
-                        dep = x.get("depends_on") or ""
-                        if dep and (JR.get(dep) or {}).get("status") != "done":
-                            continue
-                        if x.get("action_type") not in COORD_READ_ONLY:
-                            continue
-                        jobs.append(x)
-                    if not jobs:
-                        raise ValueError("没有可并行的只读步骤")
-                    for x in jobs:
-                        JR.approve(x["id"], "Boss")
-                    def one(j):
-                        return {"id": j["id"], "out": JW.run_once(dry_run=False, job_id=j["id"])}
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(jobs))) as ex:
-                        results = list(ex.map(one, jobs))
-                    EG.audit("coordinator_parallel", "medium", "allow", pid, str(len(jobs)))
-                    self._send(200, {"ok": True, "parallel": len(jobs), "results": results,
-                                     "plan": JR.get_plan(pid), "jobs": JR.plan_jobs(pid),
-                                     "trajectory": JR.trajectory(pid)})
+                    out = UNI.coordinator_step(str(payload.get("id") or ""), parallel=True)
+                    EG.audit("coordinator_parallel", "medium", "allow", str(payload.get("id") or ""),
+                             str(out.get("parallel")))
+                    self._send(200, out)
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
@@ -2266,18 +2204,10 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 try:
                     pid = str(payload.get("id") or "")
-                    jobs = [x for x in JR.plan_jobs(pid) if x.get("status") == "pending"]
-                    if not jobs:
-                        raise ValueError("没有待执行步骤")
-                    j = jobs[0]
-                    if j.get("depends_on") and (JR.get(j["depends_on"]) or {}).get("status") != "done":
-                        raise ValueError("上一步未完成")
                     if not _native_confirm("协调者执行", "确认执行下一步？"):
                         raise ValueError("用户取消了系统确认")
-                    JR.approve(j["id"], "Boss")
-                    out = JW.run_once(dry_run=False)
-                    self._send(200, {"ok": True, "job": JR.get(j["id"]), "result": out,
-                                     "plan": JR.get_plan(pid), "jobs": JR.plan_jobs(pid)})
+                    out = UNI.coordinator_step(pid, parallel=False)
+                    self._send(200, out)
                 except Exception as e:
                     self._send(400, {"ok": False, "error": "%s: %s" % (type(e).__name__, e)})
                 return
