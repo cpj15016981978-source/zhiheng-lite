@@ -850,8 +850,8 @@
     $("send").addEventListener("click", send);
     $("composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
     $("input").addEventListener("keydown", (e) => {
-      if (e.isComposing || e.keyCode === 229 || e.key === "Process") return;
-      if (e.key === "Enter" && !e.shiftKey) {
+      const composing = e.isComposing || e.keyCode === 229 || e.key === "Process";
+      if (e.key === "Enter" && !e.shiftKey && !composing) {
         e.preventDefault();
         send();
       }

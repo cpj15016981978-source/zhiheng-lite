@@ -369,13 +369,13 @@
     <button class="new" id="newChat">＋ 新对话</button>
     <div class="side-search"><input id="sessionSearch" placeholder="搜索对话…" /></div>
     <div class="sessions" id="sessions"></div>
-    <div class="side-foot">知衡记得你，时中回答你。</div>
+    <div class="side-foot">知衡记得你，月白回答你。</div>
   </aside>
 
   <main class="main">
     <header class="top">
       <div class="title" id="chatTitle">新对话</div>
-      <span class="pill" id="modePill">时中 · 标准</span>
+      <span class="pill" id="modePill">月白 · 标准</span>
       <span class="spacer"></span>
       <div class="more-wrap">
         <a class="ghost" href="/memory" title="记忆健康" style="text-decoration:none">记忆</a>
@@ -399,7 +399,7 @@
         <div class="chips">
           <button class="chip" data-q="帮我理一下今天最该做的一件事">理一下今天</button>
           <button class="chip" data-q="把这段话改成更清楚的表达：">改一段话</button>
-          <button class="chip" data-q="查一下记忆里关于时中主线的进展">查记忆</button>
+          <button class="chip" data-q="查一下记忆里关于月白主线的进展">查记忆</button>
           <button class="chip" data-q="写一个能跑的最小方案">写个方案</button>
         </div>
       </div>
@@ -413,13 +413,13 @@
       <input type="file" id="fileInput" multiple hidden
              accept=".txt,.md,.py,.json,.csv,.log,.yaml,.yml,.html,.js,.ts,.sql,.pdf,.docx,.pptx,.xlsx,.xlsm,.png,.jpg,.jpeg,.webp,.bmp" />
       <div class="box">
-        <textarea id="input" rows="1" placeholder="给时中发消息…（Enter 发送，Shift+Enter 换行）"></textarea>
+        <textarea id="input" rows="1" placeholder="给月白发消息…（Enter 发送，Shift+Enter 换行）"></textarea>
         <div class="row">
           <button class="ghost" id="attachBtn">＋附件</button>
           <button class="ghost" id="voiceBtn">按住说话</button>
           <button class="ghost" id="streamVoiceBtn" title="边说边识别">连续听</button>
           <button class="ghost" id="meetingBtn" title="会议转写，结束生成纪要">会议</button>
-          <button class="ghost" id="ttsBtn" title="让时中把回答念出来">朗读关</button>
+          <button class="ghost" id="ttsBtn" title="让月白把回答念出来">朗读关</button>
           <button class="ghost" id="streamBtn" title="边生成边念">流式关</button>
           <button class="ghost" id="searchBtn" title="只控制本次搜索是否联网；总闸在设置">本次联网</button>
           <span class="hint">AI 也会犯错，重要信息请核实</span>
@@ -899,7 +899,7 @@
   function setQuote(m) {
     const snippet = String(m.content || '').replace(/\s+/g, ' ').slice(0, 120);
     quoted = { role: m.role, content: snippet };
-    $('#quoteText').textContent = '引用' + (m.role === 'user' ? '你' : '时中') + '：' + snippet;
+    $('#quoteText').textContent = '引用' + (m.role === 'user' ? '你' : '月白') + '：' + snippet;
     $('#quoteBar').hidden = false;
     inputEl.focus();
   }
@@ -1023,7 +1023,7 @@
       const row = document.createElement('div');
       row.className = 'msg ' + (m.role === 'user' ? 'user' : 'ai');
       row.innerHTML = '<div class="avatar">' + (m.role === 'user' ? '你' : '<img src="/m1/magician-avatar.png" alt="" />') + '</div>' +
-        '<div class="body"><div class="who">' + (m.role === 'user' ? '你' : '时中') +
+        '<div class="body"><div class="who">' + (m.role === 'user' ? '你' : '月白') +
         (m.tool ? '<span class="toolbadge">工具：' + escapeHtml(m.tool) + '</span>' : '') + '</div>' +
         '<button class="msgquote" title="引用这条消息">引用</button>' +
         '<button class="msgcopy" title="复制这条消息">复制</button>' +
@@ -1490,7 +1490,7 @@
     }
     const attachmentText = attachmentParts.join('\n\n');
     const quoteLine = quoted
-      ? '[引用' + (quoted.role === 'user' ? '你' : '时中') + ']\n' + quoted.content + '\n\n' + raw
+      ? '[引用' + (quoted.role === 'user' ? '你' : '月白') + ']\n' + quoted.content + '\n\n' + raw
       : raw;
     const text = [quoteLine, searchText, attachmentText].filter(Boolean).join('\n\n');
     if (!text) return;
@@ -2046,7 +2046,7 @@
       $('#globalModelMsg').textContent = '已切换：' + d.provider;
       if (typeof modelSelect !== 'undefined') {
         modelSelect.value = spec;
-        modePill.textContent = '时中 · ' + (spec.split(':')[1] || spec);
+        modePill.textContent = '月白 · ' + (spec.split(':')[1] || spec);
       }
     } catch (e) { $('#globalModelMsg').textContent = '失败：' + e.message; }
   }
@@ -2605,7 +2605,7 @@
     if (!s || !s.messages.length) return toast('当前会话没有内容');
     const lines = ['# ' + (s.title || '知衡对话'), ''];
     for (const m of s.messages) {
-      lines.push('## ' + (m.role === 'user' ? '你' : '时中'));
+      lines.push('## ' + (m.role === 'user' ? '你' : '月白'));
       lines.push('');
       if (m.reasoning) {
         lines.push('> 思考过程：' + String(m.reasoning).replace(/\n/g, '\n> '));
@@ -2801,7 +2801,8 @@
   stopBtn.onclick = stop;
   inputEl.addEventListener('input', autoGrow);
   inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    const composing = e.isComposing || e.keyCode === 229 || e.key === 'Process';
+    if (e.key === 'Enter' && !e.shiftKey && !composing) { e.preventDefault(); send(); }
   });
   document.addEventListener('click', (e) => {
     if (e.target.matches('[data-copy]')) {
@@ -2843,7 +2844,7 @@
       }
       if (cu.name) modelSelect.value = 'custom:' + cu.name;
       else modelSelect.value = d.mode || 'balanced';
-      modePill.textContent = '时中 · ' + (modelSelect.options[modelSelect.selectedIndex]?.textContent || '标准');
+      modePill.textContent = '月白 · ' + (modelSelect.options[modelSelect.selectedIndex]?.textContent || '标准');
       modelSelect.onchange = async () => {
         try {
           const v = modelSelect.value;
@@ -2853,7 +2854,7 @@
           });
           const dd = await rr.json();
           if (!rr.ok) throw new Error(dd.error || '失败');
-          modePill.textContent = '时中 · ' + modelSelect.options[modelSelect.selectedIndex].textContent;
+          modePill.textContent = '月白 · ' + modelSelect.options[modelSelect.selectedIndex].textContent;
           toast('已切换');
         } catch (e) { toast('切换失败：' + e.message); }
       };

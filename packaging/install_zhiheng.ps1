@@ -8,7 +8,13 @@ $Root = $PSScriptRoot
 $AppSrc = Join-Path $Root 'app'
 if (-not (Test-Path $AppSrc)) { $AppSrc = $Root }
 $PySrc = Join-Path $Root 'python'
-if (-not (Test-Path $PySrc)) { $PySrc = 'D:\ZhihengInstall\python' }
+if (-not (Test-Path $PySrc)) {
+  if ($env:PAI_PYTHON -and (Test-Path $env:PAI_PYTHON)) {
+    $PySrc = $env:PAI_PYTHON
+  } else {
+    throw "缺少内置 Python：请使用完整安装包，或设置 PAI_PYTHON 指向 python 目录"
+  }
+}
 $Log = Join-Path $Root 'install.log'
 function Log($m) { Add-Content -Path $Log -Value ("{0} {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $m) }
 Log "install/upgrade -> $Target"
