@@ -37,6 +37,7 @@ SCHEMA = {
 ALLOWED = set(SCHEMA["properties"]["steps"]["items"]["properties"]["action"]["enum"])
 FIXTURE_ROOT = pathlib.Path(r"D:\DSH\coordinator_eval_workspace")
 FILES = {
+    "README.md": "# 知衡\n本地优先的 AI 工作台。\n",
     "a.txt": "alpha\n",
     "b.txt": "beta\n",
     "report.md": "# 报告\n本周完成审批链修复。风险：语义搜索未调参。\n",
@@ -72,26 +73,66 @@ def set_manifest(manifest):
     MANIFEST = list(manifest)
 
 TASKS = [
-    {"id": "t01", "goal": "读取 a.txt 并告诉我内容", "expect": ["read_text"], "min_steps": 1},
-    {"id": "t02", "goal": "列出 workspace 目录下有哪些文件", "expect": ["list_dir"], "min_steps": 1},
-    {"id": "t03", "goal": "总结 report.md 的要点", "expect": ["summarize_file"], "min_steps": 1},
-    {"id": "t04", "goal": "比较 a.txt 和 b.txt 的差异", "expect": ["read_text"], "min_steps": 2},
-    {"id": "t05", "goal": "读取 records.txt，生成一份周报文件", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t06", "goal": "读取 invoice.md，提取金额和日期", "expect": ["read_text"], "min_steps": 1},
-    {"id": "t07", "goal": "把 meeting.md 整理成待办清单", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t08", "goal": "检查 app.py 的明显错误并给修改建议", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t09", "goal": "为三天两夜的东莞行程做计划", "expect": ["agent_step"], "min_steps": 1},
-    {"id": "t10", "goal": "整理 inbox：先列出文件，再读每个 md 的摘要", "expect": ["list_dir", "summarize_file"], "min_steps": 2},
-    {"id": "t11", "goal": "你好，介绍一下你能做什么", "expect": ["agent_step"], "min_steps": 1},
-    {"id": "t12", "goal": "不要执行 shell；只读 a.txt 并报告", "expect": ["read_text"], "min_steps": 1},
-    {"id": "t13", "goal": "根据 notes.md 写一份总结到 summary.md", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t14", "goal": "先列出 docs 目录，再读取 docs/plan.md", "expect": ["list_dir", "read_text"], "min_steps": 2},
-    {"id": "t15", "goal": "读取 data.csv，汇总后生成报告", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t16", "goal": "把 inbox 里的每个 md 文件做一句话摘要", "expect": ["list_dir", "summarize_file"], "min_steps": 2},
-    {"id": "t17", "goal": "总结 docs/plan.md，并列出三个风险", "expect": ["summarize_file"], "min_steps": 1},
-    {"id": "t18", "goal": "读 draft_report.md，改写成正式周报文件", "expect": ["read_text", "agent_step"], "min_steps": 2},
-    {"id": "t19", "goal": "帮我看看该先做哪件事（信息不足时先问）", "expect": ["agent_step"], "min_steps": 1},
-    {"id": "t20", "goal": "做一份完整月报：列目录、读 records.txt 与 notes.md、生成文件", "expect": ["list_dir", "read_text", "agent_step"], "min_steps": 3},
+    {"id": 't01', "goal": '读取 a.txt 并告诉我内容', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't02', "goal": '列出 workspace 目录下有哪些文件', "expect": ['list_dir'], "min_steps": 1},
+    {"id": 't03', "goal": '总结 report.md 的要点', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't04', "goal": '比较 a.txt 和 b.txt 的差异', "expect": ['read_text'], "min_steps": 2},
+    {"id": 't05', "goal": '读取 records.txt，生成一份周报文件', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't06', "goal": '读取 invoice.md，提取金额和日期', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't07', "goal": '把 meeting.md 整理成待办清单', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't08', "goal": '检查 app.py 的明显错误并给修改建议', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't09', "goal": '为三天两夜的东莞行程做计划', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't10', "goal": '整理 inbox：先列出文件，再读每个 md 的摘要', "expect": ['list_dir', 'summarize_file'], "min_steps": 2},
+    {"id": 't11', "goal": '你好，介绍一下你能做什么', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't12', "goal": '不要执行 shell；只读 a.txt 并报告', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't13', "goal": '根据 notes.md 写一份总结到 summary.md', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't14', "goal": '先列出 docs 目录，再读取 docs/plan.md', "expect": ['list_dir', 'read_text'], "min_steps": 2},
+    {"id": 't15', "goal": '读取 data.csv，汇总后生成报告', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't16', "goal": '把 inbox 里的每个 md 文件做一句话摘要', "expect": ['list_dir', 'summarize_file'], "min_steps": 2},
+    {"id": 't17', "goal": '总结 docs/plan.md，并列出三个风险', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't18', "goal": '读 draft_report.md，改写成正式周报文件', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't19', "goal": '帮我看看该先做哪件事（信息不足时先问）', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't20', "goal": '做一份完整月报：列目录、读 records.txt 与 notes.md、生成文件', "expect": ['list_dir', 'read_text', 'agent_step'], "min_steps": 3},
+    {"id": 't21', "goal": '读取 README.md 并告诉我项目定位', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't22', "goal": '列出 docs 目录下的文件', "expect": ['list_dir'], "min_steps": 1},
+    {"id": 't23', "goal": '总结 meeting.md 的决议', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't24', "goal": '比较 notes.md 和 report.md 的内容差异', "expect": ['read_text'], "min_steps": 2},
+    {"id": 't25', "goal": '读取 records.txt，生成周报', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't26', "goal": '从 invoice.md 提取金额', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't27', "goal": '把 meeting.md 变成待办清单', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't28', "goal": '检查 app.py 并指出一个 bug', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't29', "goal": '安排明天的三件事', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't30', "goal": '整理 inbox 的 md 文件并各写一句摘要', "expect": ['list_dir', 'summarize_file'], "min_steps": 2},
+    {"id": 't31', "goal": '你能做什么？', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't32', "goal": '只读 a.txt，不要执行 shell', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't33', "goal": '把 notes.md 的内容写成 summary.md', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't34', "goal": '先列 docs，再读 docs/plan.md', "expect": ['list_dir', 'read_text'], "min_steps": 2},
+    {"id": 't35', "goal": '读取 data.csv 并生成汇总报告', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't36', "goal": '给 inbox 的 md 文件做摘要', "expect": ['list_dir', 'summarize_file'], "min_steps": 2},
+    {"id": 't37', "goal": '总结 docs/plan.md 的风险', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't38', "goal": '把 draft_report.md 改写成正式周报', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't39', "goal": '信息不足：该先做哪件事？先问我', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't40', "goal": '做月报：列目录，读 records.txt 和 notes.md，生成文件', "expect": ['list_dir', 'read_text', 'agent_step'], "min_steps": 3},
+    {"id": 't41', "goal": '读 README.md', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't42', "goal": '列一下 workspace 根目录', "expect": ['list_dir'], "min_steps": 1},
+    {"id": 't43', "goal": '总结 report.md', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't44', "goal": '对比 a.txt 与 b.txt', "expect": ['read_text'], "min_steps": 2},
+    {"id": 't45', "goal": '把 meeting.md 整理成行动项', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't46', "goal": '提取 invoice.md 的日期', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't47', "goal": '审阅 app.py 并给建议', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't48', "goal": '规划一个三天的学习计划', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't49', "goal": '汇总 inbox 里的 md 文件', "expect": ['list_dir', 'summarize_file'], "min_steps": 2},
+    {"id": 't50', "goal": '你好，介绍一下你的能力', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't51', "goal": '读取 data.csv', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't52', "goal": '总结 README.md 的定位', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't53', "goal": '列出 inbox 目录', "expect": ['list_dir'], "min_steps": 1},
+    {"id": 't54', "goal": '根据 notes.md 生成 summary.md', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't55', "goal": '检查 docs/plan.md 并总结', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't56', "goal": '读取 notes.md', "expect": ['read_text'], "min_steps": 1},
+    {"id": 't57', "goal": '总结 data.csv 的内容', "expect": ['summarize_file'], "min_steps": 1},
+    {"id": 't58', "goal": '根据 meeting.md 写会议纪要文件', "expect": ['read_text', 'agent_step'], "min_steps": 2},
+    {"id": 't59', "goal": '我不知道先做什么，先问我', "expect": ['agent_step'], "min_steps": 1},
+    {"id": 't60', "goal": '完整月报：列目录，读 records.txt 与 notes.md，汇总并生成文件', "expect": ['list_dir', 'read_text', 'agent_step'], "min_steps": 3},
 ]
 
 PROMPT = """你是知衡的顺序协调者。只输出一个 JSON 对象，不要 Markdown，不要解释。
@@ -102,7 +143,9 @@ JSON 必须符合：
 - 读文件内容用 read_text。
 - 要摘要/提炼要点用 summarize_file。
 - 要看目录用 list_dir。
-- 生成、改写、判断、写文件、闲聊、信息不足时用 agent_step。
+- 生成、改写、判断、给建议、写文件、闲聊、信息不足时一律用 agent_step。
+- 摘要不能用 read_text 代替；生成不能只用 summarize_file。
+- 信息不足时，第一步就 agent_step 先问，不要先读文件。
 - 只可使用下面清单里的路径；不要发明路径。
 - 不要发明 shell、网络或其他动作。
 可用路径：

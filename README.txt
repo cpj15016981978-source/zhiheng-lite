@@ -10,6 +10,7 @@
 - 推荐启动：双击 `start.bat`（ASCII 文件名，zipball 下载不会乱码）；接真实模型用 `start-live.bat`，双模型用 `start-dual.bat`。
 - 独立窗口：双击 `start-window.bat`，用 Edge/Chrome 的 `--app` 打开，无地址栏；本质仍是本地网页窗口。
 - 原生桌面壳：双击 `start-desktop.bat`，用 pywebview/WebView2 打开；支持深/浅主题、托盘、`--install-autostart`。
+- 协调者拆步默认用 `PAI_COORD_MODEL`（默认 `ollama:qwen3-4b-instruct:latest`，不可用回退默认模型）。
 - 本地 `/v1` 默认要求 `Authorization: Bearer <key>`；key 存在 `%LOCALAPPDATA%\Zhiheng\data\local_api_key`，可用 `PAI_LOCAL_API_REQUIRE_KEY=0` 关闭。
 - 桌面壳启动时 nonce 只在壳进程内存，不写进 HTML；高风险动作在桌面壳里弹系统确认。
 - 启动门禁 `preflight` 失败时改为警告并继续降级启动，不再直接卡住双击入口。

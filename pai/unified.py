@@ -754,7 +754,12 @@ def coordinator_start(goal, steps=None):
         steps = [x.strip() for x in steps.splitlines() if x.strip()]
     steps = [x for x in (steps or []) if str(x).strip()]
     if not steps:
-        out = M10.complete("把目标拆成 3-6 个可执行步骤，只输出编号列表：%s" % goal)
+        coord_model = os.environ.get("PAI_COORD_MODEL", "ollama:qwen3-4b-instruct:latest").strip()
+        prompt = "把目标拆成 3-6 个可执行步骤，只输出编号列表：%s" % goal
+        try:
+            out = M10.complete(prompt, models=(coord_model,)) if coord_model else M10.complete(prompt)
+        except Exception:
+            out = M10.complete(prompt)
         raw = str((out[0] or {}).get("output") or "") if out else ""
         steps = [re.sub(r"^\s*\d+[.、)]\s*", "", x).strip()
                  for x in raw.splitlines() if x.strip()][:6]
