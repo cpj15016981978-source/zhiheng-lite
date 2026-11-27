@@ -466,7 +466,43 @@ def _misc(text, mem=None):
     if text in ("规划页面", "计划"):
         return "规划页面：http://127.0.0.1:8753/plans"
     if text in ("协调者", "协调"):
-        return "协调者：http://127.0.0.1:8753/coordinator"
+        return ("协调者已就绪。固定入口：\n"
+                "/coordinator <目标> | 步骤1 | 步骤2\n"
+                "/coordinator step <id> / parallel <id> / status <id> / resume <id>\n"
+                "页面：http://127.0.0.1:8753/coordinator")
+    if text.startswith("/coordinator") or text.startswith("#协调者"):
+        raw = re.sub(r"^(/coordinator|#协调者)\s*", "", text).strip()
+        if not raw:
+            return ("协调者用法：\n/coordinator <目标> | 步骤1 | 步骤2\n"
+                    "/coordinator step <id> / parallel <id> / status <id> / resume <id>")
+        m = re.match(r"^(step|parallel|status|resume)\s+(\S+)$", raw)
+        try:
+            if m:
+                op, pid = m.group(1), m.group(2)
+                if op == "status":
+                    d = coordinator_status(pid)
+                    if not d.get("ok"):
+                        return "没有这个协调计划：%s" % pid
+                    return "协调 %s [%s]\n%s" % (
+                        pid, (d.get("plan") or {}).get("status"),
+                        "\n".join("- [%s] %s" % (j.get("status"), j.get("title"))
+                                   for j in (d.get("jobs") or [])))
+                if op == "resume":
+                    d = coordinator_resume(pid)
+                    return "恢复 %d 步：%s" % (int(d.get("resumed") or 0), pid)
+                d = coordinator_step(pid, parallel=(op == "parallel"))
+                return "协调执行 %d 步：\n%s" % (
+                    int(d.get("parallel") or 0),
+                    "\n".join("- %s" % str((x.get("out") or {}).get("result") or x.get("out"))[:800]
+                               for x in (d.get("results") or [])))
+            if "|" in raw:
+                goal, *steps = [x.strip() for x in raw.split("|") if x.strip()]
+                d = coordinator_start(goal, steps)
+            else:
+                d = coordinator_start(raw)
+            return "已激活协调 %s：\n%s" % (d["id"], "\n".join("- " + x for x in d["steps"]))
+        except Exception as e:
+            return "协调失败：%s: %s" % (type(e).__name__, e)
     if text.startswith("协调：") or text.startswith("协调:"):
         raw = re.sub(r"^协调[:：]\s*", "", text).strip()
         m = re.match(r"^(状态|下一步|并行|恢复)\s*(\S*)$", raw)
