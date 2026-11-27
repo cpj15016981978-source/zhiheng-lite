@@ -315,6 +315,8 @@ def _emotion_rule(text):
 
 def _skill_rule(text):
     try:
+        if not SL.enabled():
+            return ""
         idx = SL.SkillLibrary(PF.skills_dir(), include_builtin=True).index(text, 1)
         if not idx:
             return ""
@@ -2265,6 +2267,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/files/approve":
                 if not self._ui_gate():
                     return
+                if not _approval_ok(payload, "workspace"):
+                    self._send(403, {"ok": False, "error": "文件审批 token 缺失或无效"})
+                    return
                 if not _native_confirm("文件写入", "确认把文件写入 workspace？"):
                     self._send(403, {"ok": False, "error": "用户取消了系统确认"})
                     return
@@ -2275,6 +2280,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self.path == "/api/files/reject":
                 if not self._ui_gate():
+                    return
+                if not _approval_ok(payload, "workspace"):
+                    self._send(403, {"ok": False, "error": "文件审批 token 缺失或无效"})
                     return
                 self._send(200, JR.reject_file_proposal(payload.get("id")))
                 return

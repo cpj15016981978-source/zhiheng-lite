@@ -28,6 +28,15 @@ class BuiltinSkillTest(unittest.TestCase):
         with self.assertRaises(SL.SkillError):
             lib.approve("planning")
 
+    def test_skill_switch_off_means_no_injection(self):
+        import webapp
+        old = os.environ.pop("PAI_SKILLS", None)
+        try:
+            self.assertEqual("", webapp._skill_rule("帮我写一份周报"))
+        finally:
+            if old is not None:
+                os.environ["PAI_SKILLS"] = old
+
     def test_webapp_injects_matched_skill_index_only(self):
         import webapp
         rule = webapp._skill_rule("帮我写一份周报")
