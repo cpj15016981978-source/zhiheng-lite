@@ -23,8 +23,7 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
-SPINE = Path(os.environ.get(
-    "PAI_SPINE", r"C:\Users\Administrator\Documents\Qoder\2026-10-19\14868c32\personal-ai-system"))
+SPINE = Path(os.environ.get("PAI_SPINE") or HERE)
 sys.path.insert(0, str(SPINE))
 from pai import ear  # noqa: E402
 from pai import voice  # noqa: E402
