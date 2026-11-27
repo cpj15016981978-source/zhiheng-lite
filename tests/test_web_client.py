@@ -141,7 +141,7 @@ class TestBadInputRejected(WebCase):
                                    headers={"Content-Type": "application/json"})
             self.assertEqual(413, status)
             self.assertIn("过大", body["error"])
-        except (http.client.RemoteDisconnected, ConnectionResetError):
+        except (http.client.RemoteDisconnected, ConnectionResetError, ConnectionAbortedError):
             pass                       # 连接被直接掐断，同样算拒收
         _, hist = request(self.port, "GET", "/api/history")
         self.assertEqual(0, len(hist["episodes"]))

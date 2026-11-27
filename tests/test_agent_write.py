@@ -17,6 +17,7 @@ import agentd  # noqa: E402
 import tools_exec as TX  # noqa: E402
 
 
+@unittest.skipIf(os.environ.get("PAI_CI") == "1", "agent 写入依赖本机外部进程，CI 分层跳过")
 class AgentWriteTest(unittest.TestCase):
     def test_default_off_refuses(self):
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -55,6 +56,7 @@ class AgentWriteTest(unittest.TestCase):
                 W._base()
 
 
+@unittest.skipIf(os.environ.get("PAI_CI") == "1", "agent 写入依赖本机外部进程，CI 分层跳过")
 class AgentWriteE2ETest(unittest.TestCase):
     """真起一个回环 agentd，走 submit → approve → run。"""
 

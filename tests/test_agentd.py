@@ -20,6 +20,7 @@ import memory_tool as MT  # noqa: E402
 from pai.memory import Memory  # noqa: E402
 
 
+@unittest.skipIf(os.environ.get("PAI_CI") == "1", "agentd 本机外部进程，CI 分层跳过")
 class AgentdTest(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
