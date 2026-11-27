@@ -192,7 +192,7 @@ def _native_confirm(title, detail):
     try:
         import ctypes
         text = str(detail)[:500]
-        return ctypes.windll.user32.MessageBoxW(0, text, "知衡 · " + str(title), 0x4 | 0x40 | 0x10000) == 6
+        return ctypes.windll.user32.MessageBoxW(0, text, "知衡 · " + str(title), 0x4 | 0x40 | 0x10000 | 0x40000) == 6
     except Exception:
         return False
 
