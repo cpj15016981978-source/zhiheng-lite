@@ -1,4 +1,4 @@
-/* 时中 M1 聊天壳：零依赖，所有内容用 textContent。
+/* 月白 M1 聊天壳：零依赖，所有内容用 textContent。
  * 会话列表 + 证据折叠。本地会话存 localStorage；服务端只负责历史/推理。
  */
 (function () {
@@ -236,7 +236,7 @@
     }
     list.forEach((m) => {
       const wrap = el("div", "msg " + m.role);
-      wrap.appendChild(el("div", "who", m.role === "user" ? "你" : "时中"));
+      wrap.appendChild(el("div", "who", m.role === "user" ? "你" : "月白"));
       const row = el("div", "msg-row");
       row.appendChild(el("div", "body", m.text));
       if (m.trace) {
