@@ -77,6 +77,16 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(str(PATHS.WORKSPACE / "a.txt"), payload["path"])
         self.assertEqual({"file_exists": "a.txt"}, payload["verify"])
 
+    def test_normalize_generation_and_deps(self):
+        steps = U.normalize_steps(
+            [{"id": "bad", "action": "read_text", "text": "读 notes", "path": "notes.md",
+              "depends_on": ["missing"]}],
+            "根据 notes 生成 report")
+        self.assertEqual("read_text", steps[0]["action"])
+        self.assertEqual([], steps[0]["depends_on"])
+        self.assertEqual("agent_step", steps[-1]["action"])
+        self.assertEqual(steps[0]["id"], steps[-1]["depends_on"][0])
+
     def test_verifier_file_and_exit(self):
         (PATHS.WORKSPACE / "a.md").write_text("hello world", encoding="utf-8")
         out = VF.verify({"file_exists": "a.md", "file_contains": [{"path": "a.md", "text": "hello"}],

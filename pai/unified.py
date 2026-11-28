@@ -749,6 +749,46 @@ def coord_step(step):
     return "agent_step", {}, text
 
 
+GEN_MARKERS = ("生成", "写一份", "写成", "保存", "输出", "改写成", "整理成", "做一份", "报告文件", "周报文件")
+
+
+def normalize_steps(steps, goal=""):
+    """把模型计划修成可执行：id 连续、deps 只指前面、生成类补最后一步。"""
+    out = []
+    old_to_new = {}
+    for raw in list(steps or []):
+        if isinstance(raw, str):
+            action, payload, title = coord_step(raw)
+            d = {"text": title, "action": action}
+            d.update(payload or {})
+            old_id = ""
+            deps = []
+        elif isinstance(raw, dict):
+            action, payload, title = coord_step(raw)
+            d = dict(raw)
+            d["text"] = title
+            d["action"] = action
+            d["path"] = payload.get("path", d.get("path") or "")
+            if payload.get("verify"):
+                d["verify"] = payload["verify"]
+            old_id = str(raw.get("id") or "")
+            deps = raw.get("depends_on") or []
+        else:
+            continue
+        new_id = "s%d" % (len(out) + 1)
+        if old_id:
+            old_to_new[old_id] = new_id
+        d["id"] = new_id
+        d["depends_on"] = [old_to_new[x] for x in deps if x in old_to_new]
+        out.append(d)
+    if any(k in str(goal or "") for k in GEN_MARKERS) and not any(
+            x.get("action") == "agent_step" for x in out):
+        out.append({"id": "s%d" % (len(out) + 1), "action": "agent_step",
+                    "text": "生成/保存最终结果", "description": "根据前序内容生成最终文件",
+                    "depends_on": [out[-1]["id"]] if out else []})
+    return out
+
+
 def coordinator_start(goal, steps=None):
     from pai import model_gateway as M10
     from pai import job_runner as JR
@@ -770,21 +810,36 @@ def coordinator_start(goal, steps=None):
                  for x in raw.splitlines() if x.strip()][:6]
     if not steps:
         raise ValueError("没有拆出步骤")
-    plan = JR.create_plan(goal, steps)
+    steps = normalize_steps(steps, goal)
+    display = [str(x.get("text") or x.get("action")) for x in steps]
+    plan = JR.create_plan(goal, display)
     prev_write = ""
     ids = []
+    by_step = {}
     for i, step in enumerate(steps):
-        action, payload, title = coord_step(step)
+        action = step.get("action") or "agent_step"
+        title = str(step.get("text") or action)
+        payload = {k: v for k, v in step.items() if k not in ("id", "action", "text", "depends_on")}
         if action == "agent_step":
             payload = {"goal": goal, "step": title}
+        elif step.get("path"):
+            payload["path"] = step["path"]
+        if step.get("verify"):
+            payload["verify"] = step["verify"]
+        dep = ""
+        for d in (step.get("depends_on") or []):
+            if d in by_step:
+                dep = by_step[d]
+        if not dep:
+            dep = prev_write
         job = JR.create("协调：" + title[:80], prompt=title, agent="coordinator",
                         action_type=action, action_payload=payload,
-                        depends_on=prev_write, plan_id=plan["id"], step_index=i)
-        ids.append(job["id"])
+                        depends_on=dep, plan_id=plan["id"], step_index=i)
+        ids.append(job["id"]); by_step[step["id"]] = job["id"]
         if action not in COORD_READ_ONLY:
             prev_write = job["id"]
     JR.update_plan(plan["id"], "created")
-    return {"ok": True, "id": plan["id"], "steps": steps, "jobs": ids}
+    return {"ok": True, "id": plan["id"], "steps": display, "jobs": ids}
 
 
 def coordinator_status(pid):

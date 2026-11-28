@@ -9,8 +9,12 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import sys
 import time
 import urllib.request
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from pai import unified as U  # noqa: E402
 
 SCHEMA = {
     "type": "object",
@@ -226,16 +230,25 @@ def main():
             obj, err = parse(raw)
         except Exception as e:
             raw, obj, err = "", None, "%s: %s" % (type(e).__name__, e)
+        raw_obj = obj
+        raw_points, raw_checks = score(raw_obj, t["expect"], t["min_steps"])
+        if obj and isinstance(obj.get("steps"), list):
+            obj["steps"] = U.normalize_steps(obj["steps"], obj.get("goal") or t["goal"])
         points, checks = score(obj, t["expect"], t["min_steps"])
         rows.append({"id": t["id"], "goal": t["goal"], "points": points, "max": 6,
+                     "raw_points": raw_points, "raw_checks": raw_checks,
                      "checks": checks, "error": err, "raw": raw[:2000],
                      "seconds": round(time.time() - t0, 2)})
         print("%s %d/6 %s" % (t["id"], points, ",".join(k for k, v in checks.items() if v)), flush=True)
     total = sum(r["points"] for r in rows)
+    raw_total = sum(r.get("raw_points", 0) for r in rows)
     summary = {"model": ns.model, "tasks": len(rows), "points": total,
+               "raw_points": raw_total,
                "max": 6 * len(rows), "rate": round(total / (6 * len(rows)), 4) if rows else 0,
+               "raw_rate": round(raw_total / (6 * len(rows)), 4) if rows else 0,
                "rows": rows}
-    print("TOTAL %d/%d rate=%.2f" % (total, 6 * len(rows), summary["rate"]))
+    print("TOTAL %d/%d rate=%.2f raw=%d/%d" % (
+        total, 6 * len(rows), summary["rate"], raw_total, 6 * len(rows)))
     if ns.out:
         p = pathlib.Path(ns.out); p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
