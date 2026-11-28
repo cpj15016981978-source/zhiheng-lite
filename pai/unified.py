@@ -731,7 +731,12 @@ def coord_step(step):
         action = str(step.get("action") or "agent_step")
         payload = dict(step.get("payload") or {})
         if action in COORD_READ_ONLY and step.get("path"):
-            payload.setdefault("path", step.get("path"))
+            path = str(step.get("path"))
+            if path and not os.path.isabs(path):
+                path = str(paths.WORKSPACE / path)
+            payload.setdefault("path", path)
+        if isinstance(step.get("verify"), dict):
+            payload["verify"] = dict(step["verify"])
         return action, payload, text or action
     text = str(step or "").strip()
     for prefix, action in (("read:", "read_text"), ("list:", "list_dir"),

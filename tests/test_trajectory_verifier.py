@@ -9,6 +9,7 @@ from pai import paths as PATHS
 from pai import job_runner as JR
 from pai import verifier as VF
 from pai import job_worker as JW
+from pai import unified as U
 from unittest import mock
 import webapp
 
@@ -67,6 +68,14 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(0.03, out["cost"])
         self.assertEqual(7, out["usage"]["tokens"])
         rec.assert_called_once()
+
+    def test_coord_step_dict_resolves_path_and_verify(self):
+        action, payload, title = U.coord_step(
+            {"text": "读 a", "action": "read_text", "path": "a.txt",
+             "verify": {"file_exists": "a.txt"}})
+        self.assertEqual("read_text", action)
+        self.assertEqual(str(PATHS.WORKSPACE / "a.txt"), payload["path"])
+        self.assertEqual({"file_exists": "a.txt"}, payload["verify"])
 
     def test_verifier_file_and_exit(self):
         (PATHS.WORKSPACE / "a.md").write_text("hello world", encoding="utf-8")
